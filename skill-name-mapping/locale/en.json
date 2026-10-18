@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Skill Name Mapping",
+    "description": "Automatically discover skills and lowercase ASCII uppercase names while preserving source files, resources and invocation policies."
+  }
+}

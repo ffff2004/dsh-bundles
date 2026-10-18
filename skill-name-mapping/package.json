@@ -1,0 +1,13 @@
+{
+  "name": "@local/dsh-skill-name-mapping",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Automatically discover local skills and lowercase ASCII uppercase names without modifying source files.",
+  "exports": { ".": "./index.js", "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg" },
+  "files": ["index.js", "discovery.js", "cordis.patch.yml", "README.md", "locale/*.json", "icon.svg"],
+  "scripts": { "test": "node --test" },
+  "dependencies": { "@deepseek-ai/schemastery": "3.18.5", "yaml": "^2.8.1" },
+  "peerDependencies": { "@deepseek-ai/dsh": "0.2.1-rc.2" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

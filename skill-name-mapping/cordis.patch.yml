@@ -1,0 +1,4 @@
+- insert:
+    - id: skill-name-mapping
+      name: '@local/dsh-skill-name-mapping'
+      config: {}

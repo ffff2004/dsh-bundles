@@ -1,0 +1,192 @@
+# The `lean` agent preset as a bundle patch: the declaration the preset registry
+# mounts, inserted into the profile's composition.
+#
+# This is an AGENT-PLANE composition. The persona row below shadows the
+# deployment persona for this preset's sessions while keeping the `standard`
+# prompt construction: `complete` and `includeRuntimeContext` stay at their
+# defaults, so the first-party guidance section of every tool this preset mounts
+# and the dynamic runtime-context snapshot reach the model. The prefix is this
+# preset's own opener and the suffix carries the working directory, matching
+# `standard`'s placement. The first row then suppresses the three host sections
+# this preset does not want — harness identity, harness source, and Web surface —
+# and fails the turn if that suppression ever stops working. The `skill` catalog
+# and the `agent-instructions` baseline arrive as pre-step messages rather than
+# prompt sections, so they reach this agent either way.
+#
+# Plane rule: every row below registers into a HOST registry (`systemPrompt`,
+# `tools`, `skills`) and publishes no service, so none needs an `isolate` realm.
+# The host composition keeps the registries themselves and the `shell` executor,
+# `shell-env`, `fs`, `web`, `skills`, `attachments`, and sandbox/approval
+# services these rows consume.
+- insert:
+    - id: preset-lean
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: lean
+        name: 轻量模式
+        description: 标准拼装的系统提示与一次性 bash，外加文件读写、Skills、Web、后台任务与委派工具。
+        order: 5
+        plugins:
+          # ── lean-only prompt suppression ──────────────────────────────────
+
+          # `harness:identity`, `harness:source`, and `app:web-surface` are
+          # registered on the GLOBAL prompt layer, which no preset configuration
+          # can remove one by one. This row shadows each with an empty same-name
+          # section in this preset's scope, then throws during assembly when the
+          # first-party text still reaches the model — so an upstream rename or
+          # move fails the turn instead of silently widening the prompt. See
+          # shadow.js for the section names and leak markers.
+          - id: shadow-harness-sections
+            name: '@local/dsh-lean-preset/shadow.js'
+
+          # ── identity and workspace instructions ───────────────────────────
+
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: You are a helpful assistant.
+
+          # Workspace instructions: the user-global `$DSH_HOME/AGENTS.md` followed
+          # by the project chain down to the session working directory. The
+          # baseline reaches the model as a conversation message injected in the
+          # pre-step waterfall, not as a prompt section or a runtime context, so
+          # the persona row above neither contributes nor suppresses it. The byte
+          # budget caps the whole rendered chain; broader files are omitted
+          # before the most specific one is truncated.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+
+          # ── shell ─────────────────────────────────────────────────────────
+
+          # The `standard` one-shot `bash` tool: every call runs in a fresh shell
+          # against the HOST `shell` executor (`bash-sandbox`), `shell-env`, and
+          # the sandbox and approval stack. Both rows register into this agent's
+          # scoped catalog and publish nothing, so they sit loose — a realm here
+          # would hide the host registry they resolve.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+
+          # `description` is hidden by the profile's Host-wide
+          # @local/dsh-shell-description plugin, not a preset-local adapter.
+
+          # ── filesystem ────────────────────────────────────────────────────
+
+          # `fs`, its policy, and `attachments` stay in the host composition.
+          # This row only registers into the host `tools` registry and provides
+          # nothing, so it needs no realm. `read_image` registers while that
+          # `attachments` service is present.
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+
+          # ── background jobs ───────────────────────────────────────────────
+
+          # The job REGISTRY stays on the host plane: it is keyed by owning
+          # agent, so one host instance serves every session, and an
+          # entry-local realm here would be invisible to the producer rows above
+          # and below. What this row contributes is the controller those
+          # producers require — without it, `tool-bash`'s and the background
+          # subagents' `run_in_background` refuses with "background jobs
+          # unavailable" — plus the three `job_*` tools and completion delivery.
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+
+          # ── context compaction ────────────────────────────────────────────
+
+          # Unlike every row above, this block DOES publish services, so it must
+          # be one `cordis:group` with an `isolate` realm: `compaction-basic`
+          # provides `compaction`, `tool-result-pruner` provides
+          # `toolResultPruner`, and `command-compact` consumes `compaction` — so
+          # the provider and its consumer share one realm. Mounted loose, the
+          # mount audit rejects the preset for publishing a process-global
+          # service, and a second session would collide with the first.
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+          # ── skills ────────────────────────────────────────────────────────
+
+          # The skill REGISTRY stays host-plane and is layered per scope: these
+          # rows register into THIS preset's layer, so they need no realm.
+          # `skill-filesystem` contributes local-root discovery for this agent
+          # and `tool-skill` adds the catalog and loader; the merged catalog also
+          # carries whatever the deployment registered globally.
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+
+          # ── web ───────────────────────────────────────────────────────────
+
+          # The `web` service and its search and fetch providers stay host-plane;
+          # only the model-facing tool is per-session.
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+
+          # ── delegation ────────────────────────────────────────────────────
+
+          # The `subagents` registry and its spawn/fork backends stay in the HOST
+          # composition: the registry is a process singleton whose cross-session
+          # queries the api-proxy serves to the browser, and a provider name may
+          # only be registered once. These rows contribute the delegation TOOLS
+          # that resolve that host registry and publish nothing themselves, so
+          # they sit loose — no realm.
+          #
+          # `subagent` is the spawn provider's delegation tool, mounted once. Its
+          # continuable background mode is what lets a later `send_message` or
+          # `interrupt_agent` call steer or stop a child after it settles.
+          #
+          # `modelSelectionSettings` reads the host's `subagentModelSelection`
+          # service and registers `list_subagent_models` for an agent whose
+          # session carries a model-selection policy; the host row that publishes
+          # that service belongs to the deployment, not here.
+          - id: tool-subagent-control
+            name: '@deepseek-ai/dsh-tool-subagent-control'
+
+          - id: tool-subagent-list-agents
+            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+          - id: tool-subagent
+            name: '@deepseek-ai/dsh-tool-subagent'
+            config:
+              provider: spawn
+              toolName: subagent
+              modelSelectionSettings: true
+              backgroundMode: continuable
+
+          # ── presentation ──────────────────────────────────────────────────
+
+          # `present` resolves the host `fs` and `sessionProjections`; it only
+          # registers into the host `tools` registry and provides nothing, so it
+          # sits loose — no realm.
+          #
+          # `ask_user_question` (`@deepseek-ai/dsh-tool-ask-user`) is deliberately
+          # NOT mounted: a lean session never asks the user a question mid-turn.
+          # The host still registers `userQuestions`, which approvals and plan
+          # mode use independently of this tool.
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'

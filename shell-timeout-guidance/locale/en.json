@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Shell timeout guidance",
+    "description": "Guides models to omit unnecessary timeoutMs overrides for visible bash and pwsh tools. Does not change execution defaults."
+  }
+}

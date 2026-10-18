@@ -1,0 +1,3 @@
+- insert:
+    - id: shell-description
+      name: '@local/dsh-shell-description'

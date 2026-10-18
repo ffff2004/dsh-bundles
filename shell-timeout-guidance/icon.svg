@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Shell timeout guidance</title>
+  <rect x="3" y="8" width="58" height="48" rx="11" fill="#17354a"/>
+  <path d="m13 23 10 9-10 9m16 0h9" fill="none" stroke="#79e0d3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="47" cy="23" r="10" fill="#f5c86a"/>
+  <path d="M47 17v6l4 3" fill="none" stroke="#17354a" stroke-width="3" stroke-linecap="round"/>
+</svg>

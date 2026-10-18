@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Hidden shell description",
+    "description": "Hide the per-call description argument of one-shot bash and pwsh across agent presets, while preserving execution compatibility."
+  }
+}

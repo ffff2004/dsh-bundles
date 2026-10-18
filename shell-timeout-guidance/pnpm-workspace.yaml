@@ -1,0 +1,2 @@
+# The Harness peer is provided by the profile, not needed for standalone tests.
+autoInstallPeers: false

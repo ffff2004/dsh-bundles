@@ -1,0 +1,6 @@
+# Rows this bundle inserts: one package carrying both halves. The Host half
+# registers the download route; the Client half is discovered through the
+# package.json `dsh.client` declaration and rendered in the Web page.
+- insert:
+    - id: preview-download
+      name: '@local/dsh-preview-download'

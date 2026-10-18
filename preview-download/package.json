@@ -1,0 +1,21 @@
+{
+  "name": "@local/dsh-preview-download",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "meta": {
+    "title": "Preview download",
+    "description": "Adds a download control to the Web document-preview toolbar, streaming the previewed workspace file from an authenticated Host route."
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": ["@deepseek-ai/dsh-client-ui-sidebar-documentpreview"]
+    }
+  }
+}

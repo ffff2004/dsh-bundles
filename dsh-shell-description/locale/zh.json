@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "隐藏 Shell 描述参数",
+    "description": "在各 Agent 预设中隐藏一次性 bash、pwsh 的 description 参数及对应说明，同时保留执行兼容。"
+  }
+}

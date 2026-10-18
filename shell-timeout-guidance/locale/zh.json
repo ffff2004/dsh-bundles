@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Shell 超时指导",
+    "description": "引导模型对可见的 bash 和 pwsh 工具省略不必要的 timeoutMs 参数，不改变执行器默认行为。"
+  }
+}

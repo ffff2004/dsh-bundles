@@ -1,0 +1,15 @@
+# The live OpenAI Codex provider.
+#
+# One Host row and no Client half: the provider registers into the `llm`
+# registry, so every existing surface (the model picker, the Models settings
+# page, session model selection) already lists it — nothing new is rendered.
+#
+# The row's `config` is the whole plugin surface; every field has a default, so
+# an empty `config` serves the codex CLI's own list-visible models under the
+# route key `codex-live`. Read index.js for what each field does, or run
+# `cordis_inspect_query` with `Config.listConfigs` and `name:
+# "@local/dsh-codex-live"` for the live JSON Schema.
+- insert:
+    - id: codex-live
+      name: '@local/dsh-codex-live'
+      config: {}

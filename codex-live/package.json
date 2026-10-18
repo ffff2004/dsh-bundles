@@ -1,0 +1,38 @@
+{
+  "name": "@local/dsh-codex-live",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Registers a codex-live provider whose model catalog follows the local codex CLI state.",
+  "meta": {
+    "title": "OpenAI Codex (live)",
+    "description": "Adds a `codex-live` provider whose models follow the local codex CLI catalog (~/.codex/models_cache.json) and whose requests carry the codex CLI's own ChatGPT token (~/.codex/auth.json)."
+  },
+  "exports": {
+    ".": "./index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh": "0.2.1-rc.2"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-authorization": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-credentials": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-launch-environment": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm-pi-ai": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.5",
+    "@earendil-works/pi-ai": "1.3.0"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@local/dsh-lean-preset",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "meta": {
+    "title": "Lean agent preset",
+    "description": "Declares the lean agent preset: the minimal prompt construction with filesystem, skill, web, background-job, and delegation tools."
+  },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

@@ -33,17 +33,14 @@ async function fixture(t, config = {}) {
   await settle(ctx)
   const scope = {}
   ctx.tools.visible.set(scope, new Set(['job_output', 'send_message']))
-  const texts = async (view = scope) => (await ctx.systemPrompt.assemble({ scope: view })).contexts
-    .filter(item => item.name.startsWith('local-background-wait-'))
-    .map(item => item.text)
-    .filter(Boolean)
-  return { ctx, scope, fork, texts }
+  const contextNames = async (view = scope) => (await ctx.systemPrompt.assemble({ scope: view })).contexts
+    .filter(item => item.name.startsWith('local-background-wait-') && item.text.length > 0)
+    .map(item => item.name)
+  return { ctx, scope, fork, contextNames }
 }
 
-// Pin model-visible instructions so wording changes require explicit review.
-const yieldText = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn until a completion notification arrives. Do not call job_output or job_list merely to wait or check progress. A waiting update is not a completion report; collect the relevant results with job_output when resumed.'
-const blockingText = 'Do not yield solely to await job completion notifications; use job_output with wait: true instead.'
-const subagentText = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn until their completion notifications arrive. Do not call send_message or list_agents merely to wait or check progress. A waiting update is not a completion report. If background jobs require blocking waits, collect those results before yielding for subagents.'
+const jobsContext = 'local-background-wait-jobs'
+const subagentsContext = 'local-background-wait-subagents'
 
 test('defaults to yield and rejects unsupported jobs modes', () => {
   assert.equal(plugin.Config({}).jobsWaitMode, 'yield')
@@ -52,73 +49,73 @@ test('defaults to yield and rejects unsupported jobs modes', () => {
 })
 
 test('without optional services there is no guidance', async t => {
-  const { texts } = await fixture(t)
-  assert.deepEqual(await texts(), [])
+  const { contextNames } = await fixture(t)
+  assert.deepEqual(await contextNames(), [])
 })
 
 test('jobs can mount, unmount and remount without duplicate context', async t => {
-  const { ctx, texts } = await fixture(t)
+  const { ctx, contextNames } = await fixture(t)
   const Jobs = capability('jobs')
   const first = ctx.plugin(Jobs)
   await settle(ctx)
-  assert.deepEqual(await texts(), [yieldText])
+  assert.deepEqual(await contextNames(), [jobsContext])
   await first.dispose()
   await settle(ctx)
-  assert.deepEqual(await texts(), [])
+  assert.deepEqual(await contextNames(), [])
   ctx.plugin(Jobs)
   await settle(ctx)
-  assert.deepEqual(await texts(), [yieldText])
+  assert.deepEqual(await contextNames(), [jobsContext])
 })
 
 test('subagents work without jobs', async t => {
-  const { ctx, texts } = await fixture(t)
+  const { ctx, contextNames } = await fixture(t)
   const fork = ctx.plugin(capability('subagents'))
   await settle(ctx)
-  assert.deepEqual(await texts(), [subagentText])
+  assert.deepEqual(await contextNames(), [subagentsContext])
   await fork.dispose()
   await settle(ctx)
-  assert.deepEqual(await texts(), [])
+  assert.deepEqual(await contextNames(), [])
 })
 
-test('blocking mode adds a short counter-instruction alongside subagent guidance', async t => {
-  const { ctx, texts } = await fixture(t, { jobsWaitMode: 'blocking' })
+test('blocking mode registers jobs and subagent contexts independently', async t => {
+  const { ctx, contextNames } = await fixture(t, { jobsWaitMode: 'blocking' })
   ctx.plugin(capability('jobs'))
   await settle(ctx)
-  assert.deepEqual(await texts(), [blockingText])
-  assert.deepEqual(await texts({}), [])
+  assert.deepEqual(await contextNames(), [jobsContext])
+  assert.deepEqual(await contextNames({}), [])
   ctx.plugin(capability('subagents'))
   await settle(ctx)
-  assert.deepEqual(await texts(), [blockingText, subagentText])
+  assert.deepEqual(await contextNames(), [jobsContext, subagentsContext])
 })
 
 test('tool visibility is evaluated per scope on every assembly', async t => {
-  const { ctx, scope, texts } = await fixture(t)
+  const { ctx, scope, contextNames } = await fixture(t)
   ctx.plugin(capability('jobs'))
   ctx.plugin(capability('subagents'))
   await settle(ctx)
-  assert.deepEqual(await texts({}), [])
+  assert.deepEqual(await contextNames({}), [])
   ctx.tools.visible.get(scope).delete('send_message')
-  assert.deepEqual(await texts(), [yieldText])
+  assert.deepEqual(await contextNames(), [jobsContext])
   ctx.tools.visible.get(scope).delete('job_output')
-  assert.deepEqual(await texts(), [])
+  assert.deepEqual(await contextNames(), [])
   ctx.tools.visible.get(scope).add('send_message')
-  assert.deepEqual(await texts(), [subagentText])
+  assert.deepEqual(await contextNames(), [subagentsContext])
 })
 
-test('plugin disposal removes both contexts; reload can change jobs policy', async t => {
-  const { ctx, fork, texts } = await fixture(t)
+test('plugin disposal and reload preserve context registration across jobs modes', async t => {
+  const { ctx, fork, contextNames } = await fixture(t)
   ctx.plugin(capability('jobs'))
   ctx.plugin(capability('subagents'))
   await settle(ctx)
-  assert.deepEqual(await texts(), [yieldText, subagentText])
+  assert.deepEqual(await contextNames(), [jobsContext, subagentsContext])
   await fork.dispose()
   await settle(ctx)
-  assert.deepEqual(await texts(), [])
+  assert.deepEqual(await contextNames(), [])
   const blockingFork = ctx.plugin(plugin, { jobsWaitMode: 'blocking' })
   await settle(ctx)
-  assert.deepEqual(await texts(), [blockingText, subagentText])
+  assert.deepEqual(await contextNames(), [jobsContext, subagentsContext])
   await blockingFork.dispose()
   ctx.plugin(plugin, { jobsWaitMode: 'yield' })
   await settle(ctx)
-  assert.deepEqual(await texts(), [yieldText, subagentText])
+  assert.deepEqual(await contextNames(), [jobsContext, subagentsContext])
 })

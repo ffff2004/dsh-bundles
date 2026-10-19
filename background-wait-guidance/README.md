@@ -1,0 +1,50 @@
+# 后台等待指引
+
+当没有其他独立工作时，引导模型先告知用户等待对象，再让出当前 turn 等待后台完成通知，避免通过工具反复查询进度。独立 bundle，不修改 DSH 内置代码。
+
+## 行为
+
+- `jobs` 服务挂载时注册 jobs context，`subagents` 服务挂载时注册子代理 context，两者互不依赖。jobs 提示只引用 `job_output`、`job_list`；子代理提示只引用 `send_message`、`list_agents`。
+- 每次组装请求时检查当前 agent 可见的工具：仅对可见 `job_output` 的 agent 显示 jobs 提示，仅对可见 `send_message` 的 agent 显示子代理提示。
+- 服务或插件卸载时，对应注册自动清理；恢复挂载时重新注册。
+- 默认 jobs 和子代理都建议告知用户等待对象后结束当前 turn，由完成通知触发后续处理；等待消息不表示任务已经完成。
+- jobs 使用阻塞策略时，先收集 job 结果，再让出 turn 等待子代理。不会禁止真正需要的消息发送或结果读取。
+
+## 配置
+
+插件条目 ID：`background-wait-guidance`；包名：`@local/dsh-background-wait-guidance`。
+
+```yaml
+config:
+  jobsWaitMode: yield
+```
+
+| `jobsWaitMode` | 指令 | 适用场景 |
+| --- | --- | --- |
+| `yield`（默认） | 告知用户等待哪些 jobs，然后结束 turn；收到通知后读取结果。 | `tool-jobs` 使用默认 `completionDelivery: wakeup` 且未限制连续唤醒次数。 |
+| `blocking` | 简短提醒：不要仅为等待 job 完成通知而结束 turn，改用 `job_output(wait: true)`。 | `completionDelivery: quiet`，或配置了可能耗尽的连续唤醒次数上限。 |
+
+此配置只选择提示，不修改 `tool-jobs` 的通知配置，不读取或复制其内部唤醒计数。修改内置通知策略时，应同步调整本插件配置。配置变更通过 Loader 重新激活插件，工具可见性在每次请求组装时重新读取。
+
+## 安装
+
+通过 Plugin Manager 安装本目录
+
+安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准。支持 DSH `0.2.1-rc.2`。
+
+## 验证
+
+```bash
+pnpm install --ignore-scripts --config.auto-install-peers=false
+pnpm test
+```
+
+测试使用开发依赖中的真实 Cordis 和 systemPrompt 服务，验证可选服务挂载、卸载、恢复、插件清理、两种 jobs 策略和按 agent scope 的工具可见性；不调用模型 API。
+
+## 限制与模型影响
+
+仅注入提示，不改变工具、通知交付、后台工作或主 agent 生命周期，不保证模型一定遵循。context 遵循 Harness 的可选运行时上下文抑制设置；关闭运行时上下文的 preset 不会收到这些提示。不自动检测通知策略或剩余唤醒额度，也不处理 goals、schedule 或 session 恢复后的后台任务恢复。已有内置等待提示保持不变；本插件补充“发送等待消息后结束 turn”的行为说明。
+
+每个启用且可见的能力增加一个短 context，无额外工具调用；jobs 使用 `blocking` 时注入简短反向指令，未挂载服务或工具不可见时不产生提示正文。工具可见性改变会改变对应 context，可能影响 prompt cache 复用；不额外重写历史消息。
+
+图标为本 bundle 原创 SVG，不依赖客户端代码。

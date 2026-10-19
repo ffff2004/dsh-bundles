@@ -1,0 +1,5 @@
+- insert:
+    - id: background-wait-guidance
+      name: '@local/dsh-background-wait-guidance'
+      config:
+        jobsWaitMode: yield

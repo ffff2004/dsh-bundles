@@ -1,8 +1,0 @@
-{
-  "name": "@local/openalex-mcp",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "description": "OpenAlex official MCP connection through an OAuth-capable stdio bridge",
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
-}

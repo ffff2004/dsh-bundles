@@ -10,9 +10,9 @@ export const Config = z.object({
   ),
 })
 
-const jobsYield = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn until a completion notification arrives. Do not call job_output or job_list merely to wait or check progress. A waiting update is not a completion report; collect the relevant results with job_output when resumed.'
+const jobsYield = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be notified when a job finishes. A waiting update is not a completion report.'
 const jobsBlocking = 'Do not yield solely to await job completion notifications; use job_output with wait: true instead.'
-const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn until their completion notifications arrive. Do not call send_message or list_agents merely to wait or check progress. A waiting update is not a completion report. If background jobs require blocking waits, collect those results before yielding for subagents.'
+const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be notified when a subagent finishes or sends a message. A waiting update is not a completion report.'
 
 /** Register independently owned contexts for optional background capabilities. */
 export function apply(ctx, config = {}) {

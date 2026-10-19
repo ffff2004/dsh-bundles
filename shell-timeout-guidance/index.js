@@ -33,7 +33,7 @@ export function apply(ctx) {
         visible.push(shellName)
       }
       if (visible.length === 0) return ''
-      return `For ${visible.join(' and ')} calls, omit \`timeoutMs\` unless the user requests a specific timeout or the command needs a deliberate override of the configured default. Do not routinely supply a timeout.`
+      return `For ${visible.join(' and ')} calls, omit \`timeoutMs\` unless the command needs a deliberate override of the configured default. Do not routinely supply a timeout.`
     },
     interpolate: false,
   })

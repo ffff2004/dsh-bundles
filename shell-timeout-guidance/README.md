@@ -4,7 +4,7 @@
 
 根据当前 agent scope 中可见的工具，只贡献一条简短的 system-prompt section。例如两个工具都可见时：
 
-> For bash and pwsh calls, omit `timeoutMs` unless the user requests a specific timeout or the command needs a deliberate override of the configured default. Do not routinely supply a timeout.
+> For bash and pwsh calls, omit `timeoutMs` unless the command needs a deliberate override of the configured default. Do not routinely supply a timeout.
 
 只有 bash 或 pwsh 时，提示只提及该工具；两个都不可见时不添加提示。
 

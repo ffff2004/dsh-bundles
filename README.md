@@ -16,3 +16,26 @@
 ## 使用
 
 通过 Harness Plugin Manager 将对应子目录安装为 bundle。具体配置、版本兼容性及重启要求以各 bundle 的 README 为准。
+
+### 从 GitHub 安装（GUI）
+
+以 [shell-timeout-guidance](<shell-timeout-guidance/README.md>) 为例，仓库发布到 GitHub 后：
+
+1. 在 Web GUI 侧栏打开 **插件 → 添加插件**。
+2. 在“包名或地址”中输入以下 Git 地址：
+   ```text
+   git+https://github.com/ffff2004/dsh-bundles.git#HEAD&path:/shell-timeout-guidance
+   ```
+3. 点击 **安装**，按界面提示完成启用。
+
+### 从 GitHub 安装（命令行）
+
+在 `web` profile 中安装同一个 bundle：
+
+```bash
+dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HEAD&path:/shell-timeout-guidance'
+```
+
+如使用其他 profile，将 `web` 替换为对应名称。整段地址需加引号，避免 shell 将 `&` 解释为后台运行符。
+
+本仓库包含多个 bundle，必须通过 `path:/子目录` 指定要安装的那个，不能直接安装仓库根目录。`HEAD` 跟随仓库默认分支；如需固定版本，可替换为 tag 或 commit。

@@ -11,7 +11,7 @@
 | [dsh-shell-description](<dsh-shell-description/README.md>) | 从 agent 可见的 `bash` / `pwsh` 工具定义中隐藏 `description` 参数，执行时补入兼容描述，不改变命令与权限语义。 |
 | [lean-preset](<lean-preset/README.md>) | 提供轻量级 agent preset，保留文件、Shell、Skills、Web、后台任务与委派工具，精简部分 Harness 系统提示。 |
 | [preview-download](<preview-download/README.md>) | 在 Web UI 文档预览工具栏添加下载按钮，通过浏览器下载当前预览文件。 |
-| [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 为可见的 `bash` / `pwsh` 工具添加提示，引导模型省略不必要的 `timeoutMs`，不修改默认超时或工具参数。 |
+| [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`；超时终止时不添加，不修改默认超时或工具参数。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
 
 ## 使用

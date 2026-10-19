@@ -6,7 +6,7 @@
 
 > For bash and pwsh calls, omit `timeoutMs` unless the command needs a deliberate override of the configured default. Do not routinely supply a timeout.
 
-只有 bash 或 pwsh 时，提示只提及该工具；两个都不可见时不添加提示。
+只为超时转后台的 bash/pwsh 添加提示；描述为 `kills the command on expiry`（超时终止）的工具仍通过上游校验，但不追加 system prompt。两种模式混用时只提及转后台的工具；没有可见的转后台工具时不添加提示。
 
 ## 使用与迁移
 

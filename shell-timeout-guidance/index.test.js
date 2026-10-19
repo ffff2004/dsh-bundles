@@ -12,7 +12,7 @@ const approved = [
 const definition = description => ({
   parameters: { type: 'object', properties: { timeoutMs: { type: 'number', description } } },
 })
-const expected = names => `For ${names.join(' and ')} calls, omit \`timeoutMs\` unless the user requests a specific timeout or the command needs a deliberate override of the configured default. Do not routinely supply a timeout.`
+const expected = names => `For ${names.join(' and ')} calls, omit \`timeoutMs\` unless the command needs a deliberate override of the configured default. Do not routinely supply a timeout.`
 function sectionFor(get) {
   const sections = []
   plugin.apply({ tools: { get }, systemPrompt: { section: value => sections.push(value) } })
@@ -40,8 +40,15 @@ for (const names of [['bash'], ['pwsh'], ['bash', 'pwsh']]) {
         assert.ok(['bash', 'pwsh'].includes(name))
         return names.includes(name) ? definition(description) : undefined
       })
-      assert.equal(section.text({ scope }), expected(names))
+      assert.equal(section.text({ scope }), description === approved[0] ? expected(names) : '')
     }
+  })
+}
+
+for (const backgroundName of ['bash', 'pwsh']) {
+  test(`mixed timeout modes: guides only ${backgroundName}`, () => {
+    const section = sectionFor(name => definition(approved[name === backgroundName ? 0 : 1]))
+    assert.equal(section.text({}), expected([backgroundName]))
   })
 }
 
@@ -114,7 +121,8 @@ test('real scoped registry: bash/pwsh isolation, drift, restriction, shadowing a
 
     const removeSecond = bashScope.ctx.tools.register(makeShell('pwsh', approved[1]))
     const combined = await assemble(bashAgent)
-    assert.equal(combined.sections.filter(s => s.text === expected(['bash', 'pwsh'])).length, 1)
+    assert.equal(combined.sections.filter(s => s.text === expected(['bash'])).length, 1)
+    assert.ok(!renderPrompt(combined).includes('For bash and pwsh calls'))
     removeSecond()
     removePwsh()
     removePwsh = pwshScope.ctx.tools.register(makeShell('pwsh', 'Changed upstream'))
@@ -122,13 +130,13 @@ test('real scoped registry: bash/pwsh isolation, drift, restriction, shadowing a
     assert.ok((await prompt(bashAgent)).includes(expected(['bash'])))
     removePwsh()
     pwshScope.ctx.tools.register(makeShell('pwsh', approved[1]))
-    assert.ok((await prompt(pwshAgent)).includes(expected(['pwsh'])))
+    assert.ok(!(await prompt(pwshAgent)).includes('timeoutMs'))
 
     // A scoped approved bash shadows a global drifted bash. A restriction hides it elsewhere.
     const removeGlobal = owner.tools.register(makeShell('bash', 'Changed upstream'))
     assert.ok((await prompt(bashAgent)).includes(expected(['bash'])))
     const lift = pwshScope.ctx.tools.restrict({ deny: ['bash'] })
-    assert.ok((await prompt(pwshAgent)).includes(expected(['pwsh'])))
+    assert.ok(!(await prompt(pwshAgent)).includes('timeoutMs'))
     lift()
     await assert.rejects(assemble(pwshAgent), /upstream bash\.timeoutMs\.description/)
     removeGlobal()

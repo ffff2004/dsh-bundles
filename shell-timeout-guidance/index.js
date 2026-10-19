@@ -30,7 +30,7 @@ export function apply(ctx) {
             + `Actual: ${actual === undefined ? '<missing>' : JSON.stringify(actual)}`,
           )
         }
-        visible.push(shellName)
+        if (actual === expectedDescriptions[0]) visible.push(shellName)
       }
       if (visible.length === 0) return ''
       return `For ${visible.join(' and ')} calls, omit \`timeoutMs\` unless the command needs a deliberate override of the configured default. Do not routinely supply a timeout.`

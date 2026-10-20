@@ -9,7 +9,7 @@
 | [background-wait-guidance](<background-wait-guidance/README.md>) | 同一 bundle 内提供可独立启停的 jobs 与子代理等待指引，通过 system prompt 引导模型告知等待对象后让出 turn，等待后台完成通知。 |
 | [codex-live](<codex-live/README.md>) | 注册跟随本机 Codex CLI 模型缓存的 LLM route，使用其认证信息，并为 catalog 尚未收录的模型补充能力模板。 |
 | [dsh-shell-description](<dsh-shell-description/README.md>) | 从 agent 可见的 `bash` / `pwsh` 工具定义中隐藏 `description` 参数，执行时补入兼容描述，不改变命令与权限语义。 |
-| [lean-preset](<lean-preset/README.md>) | 提供轻量级 agent preset，保留文件、Shell、Skills、Web、后台任务与委派工具，使用标准系统提示拼装，不额外屏蔽宿主提示。 |
+| [lean-preset](<lean-preset/README.md>) | 提供轻量级 agent preset，保留文件、Shell、Skills、Web、后台任务与委派工具，使用标准系统提示拼装。 |
 | [preview-download](<preview-download/README.md>) | 在 Web UI 文档预览工具栏添加下载按钮，通过浏览器下载当前预览文件。 |
 | [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`；超时终止时不添加，不修改默认超时或工具参数。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |

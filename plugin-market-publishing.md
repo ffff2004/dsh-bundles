@@ -12,9 +12,8 @@ CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 U
 4. 若 `github-pages` environment 有分支限制，允许 `main` 以及用于发布的 tags；有审批规则时需完成审批。
 5. 确认工作流部署成功，打开 [README](<README.md>) 中的市场索引 URL，应直接得到 JSON（HTTP 200，不能重定向）；随后在 DSH 添加索引源。
 
-触发条件为 `main` 推送、任意 tag 推送、手动运行，以及每 6 小时一次（UTC `00:23 / 06:23 / 12:23 / 18:23`，GitHub 可能延迟调度）。
+触发条件为 `main` 推送、任意 tag 推送及手动运行。
 Pull request 只生成和校验 artifact，不部署；手动运行也只允许 `main` 或 tag 部署。
-GitHub 对公开仓库长期无活动的定时工作流可能自动停用，届时需在 Actions 中重新启用。
 
 ## 发布与失败处理
 

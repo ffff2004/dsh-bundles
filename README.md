@@ -18,6 +18,17 @@
 
 通过 Harness Plugin Manager 将对应子目录安装为 bundle。具体配置、版本兼容性及重启要求以各 bundle 的 README 为准。
 
+### 从插件市场安装（推荐）
+
+启用实验性插件 **Custom plugin markets**，进入 **插件 → Discover**，添加索引源：
+
+```text
+https://ffff2004.github.io/dsh-bundles/index.json
+```
+
+选择 bundle 和版本，确认来源后安装。索引中的 Git 来源固定到 commit，不会在安装时漂移到新的 `HEAD`。
+该地址需要维护者完成 [Pages 首次配置](<plugin-market-publishing.md#首次启用>) 并成功部署后才可用。
+
 ### 从 GitHub 安装（GUI）
 
 以 [shell-timeout-guidance](<shell-timeout-guidance/README.md>) 为例，仓库发布到 GitHub 后：
@@ -40,3 +51,7 @@ dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HE
 如使用其他 profile，将 `web` 替换为对应名称。整段地址需加引号，避免 shell 将 `&` 解释为后台运行符。
 
 本仓库包含多个 bundle，必须通过 `path:/子目录` 指定要安装的那个，不能直接安装仓库根目录。`HEAD` 跟随仓库默认分支；如需固定版本，可替换为 tag 或 commit。
+
+## 发布维护
+
+首次配置、版本发布及本地生成步骤见 [插件市场发布说明](<plugin-market-publishing.md>)。

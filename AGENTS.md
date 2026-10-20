@@ -5,3 +5,5 @@ place local DSH (DeepSeek Harness) bundles here.
 如有需要，可以参考本地 DSH 源码 checkout。
 
 use conventional commit `type(bundle): ...`
+
+插件市场发布、CI/Pages 维护或本地生成索引时，先读 [发布说明](<plugin-market-publishing.md>)。

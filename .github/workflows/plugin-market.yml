@@ -1,0 +1,115 @@
+name: Publish plugin market
+
+on:
+  push:
+    branches: [main]
+    tags: ['**']
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 */6 * * *'
+
+# Keep publishing credentials out of the build job and pull requests.
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-market-${{ github.event.pull_request.number || 'publish' }}
+  cancel-in-progress: false
+
+env:
+  # Update deliberately after testing a new reference generator revision.
+  DSH_REF: 687f282e8625c6b8d11ff58211a90524be2e4317
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out the reference generator
+        uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ env.DSH_REF }}
+          path: .dsh-source
+          persist-credentials: false
+
+      - name: Set up pnpm from the generator's packageManager
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: .dsh-source/package.json
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: .dsh-source/pnpm-lock.yaml
+
+      - name: Install generator dependencies only
+        working-directory: .dsh-source
+        run: pnpm --filter '@deepseek-ai/dsh-plugin-market-generator...' install --frozen-lockfile --ignore-scripts
+
+      - name: Create temporary source list for this repository
+        run: printf '%s/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/plugin-market-sources.txt"
+
+      - name: Restore generator cache
+        uses: actions/cache@v4
+        with:
+          path: .plugin-market-cache
+          key: plugin-market-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            plugin-market-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-
+
+      - name: Generate index and icons
+        working-directory: .dsh-source
+        run: |
+          pnpm --filter @deepseek-ai/dsh-plugin-market-generator start \
+            --input "$RUNNER_TEMP/plugin-market-sources.txt" \
+            --output "$GITHUB_WORKSPACE/_site/index.json" \
+            --cache "$GITHUB_WORKSPACE/.plugin-market-cache" \
+            --title 'ffff2004 DSH Bundles' \
+            --description 'Personal DeepSeek Harness bundles by ffff2004'
+
+      # A source failure already exits nonzero. Also reject a successful but
+      # empty result (for example, all bundles skipped for invalid manifests).
+      - name: Reject an empty market
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+          const index = JSON.parse(readFileSync('_site/index.json', 'utf8'));
+          if (!Array.isArray(index.plugins) || index.plugins.length === 0) {
+            throw new Error('Refusing to publish an empty plugin market');
+          }
+          console.log(`Validated market: ${index.plugins.length} plugins`);
+          JS
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy market
+        id: deployment
+        uses: actions/deploy-pages@v4

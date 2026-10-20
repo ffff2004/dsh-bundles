@@ -1,1 +1,6 @@
 node_modules/
+
+# Plugin market generator checkout, cache, and published output.
+/.dsh-source/
+/.plugin-market-cache/
+/_site/

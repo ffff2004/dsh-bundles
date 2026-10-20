@@ -14,14 +14,14 @@ const jobsYield = 'When no independent work remains and you are waiting for back
 const jobsBlocking = 'Do not yield solely to await job completion notifications; use job_output with wait: true instead.'
 const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be notified when a subagent finishes or sends a message. A waiting update is not a completion report.'
 
-/** Register independently owned contexts for optional background capabilities. */
+/** Register independently owned system prompt sections for optional background capabilities. */
 export function apply(ctx, config = {}) {
   const { jobsWaitMode } = Config(config)
 
   ctx.inject(['jobs'], (jobCtx) => {
-    jobCtx.systemPrompt.context({
+    jobCtx.systemPrompt.section({
       name: 'local-background-wait-jobs',
-      order: 920,
+      order: jobCtx.systemPrompt.getSectionOrder('TOOL_JOBS') + 1,
       interpolate: false,
       text: ({ scope }) => jobCtx.tools.get('job_output', scope) === undefined
         ? ''
@@ -30,9 +30,9 @@ export function apply(ctx, config = {}) {
   })
 
   ctx.inject(['subagents'], (subagentCtx) => {
-    subagentCtx.systemPrompt.context({
+    subagentCtx.systemPrompt.section({
       name: 'local-background-wait-subagents',
-      order: 921,
+      order: subagentCtx.systemPrompt.getSectionOrder('TOOL_SUBAGENT') + 1,
       interpolate: false,
       text: ({ scope }) => subagentCtx.tools.get('send_message', scope) === undefined
         ? ''

@@ -6,7 +6,7 @@
 
 | Bundle | 简介 |
 | --- | --- |
-| [background-wait-guidance](<background-wait-guidance/README.md>) | 无独立工作时告知用户等待对象，让出 turn 等待后台完成通知；jobs 可配置简短的阻塞等待提醒。 |
+| [background-wait-guidance](<background-wait-guidance/README.md>) | 通过 system prompt 引导模型在无独立工作时告知等待对象、让出 turn 等待后台完成通知；jobs 可配置简短的阻塞等待提醒。 |
 | [codex-live](<codex-live/README.md>) | 注册跟随本机 Codex CLI 模型缓存的 LLM route，使用其认证信息，并为 catalog 尚未收录的模型补充能力模板。 |
 | [dsh-shell-description](<dsh-shell-description/README.md>) | 从 agent 可见的 `bash` / `pwsh` 工具定义中隐藏 `description` 参数，执行时补入兼容描述，不改变命令与权限语义。 |
 | [lean-preset](<lean-preset/README.md>) | 提供轻量级 agent preset，保留文件、Shell、Skills、Web、后台任务与委派工具，精简部分 Harness 系统提示。 |

@@ -1,4 +1,11 @@
-/** Omit the body cache key without changing transport/session identity or retention. */
+/**
+ * Omit session-level cache grouping: GPT-5.6+ routes caches automatically, and
+ * this deployment needs no separate cache accounting. Avoiding unnecessary
+ * grouping may help cross-session reuse; it does not guarantee more cache hits.
+ * Preserve transport/session identity and retention. OpenAI API guidance is not
+ * a guarantee of identical behavior on the ChatGPT backend used by this route.
+ * https://developers.openai.com/api/docs/guides/prompt-caching.md#prompt-cache-keys
+ */
 export function withoutPromptCacheKey(options) {
   return {
     ...options,

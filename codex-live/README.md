@@ -47,6 +47,12 @@
 - 日志（`codex-live:` 前缀）会逐条说明哪些模型是合成的、用了哪个模板、窗口与档位是什么，以及 token 是否临近过期。
 - 两条请求路径（`stream` / `streamSimple`）都通过 `onPayload` 在原回调执行后删除最终请求体的 `prompt_cache_key`；保留 `sessionId` 的传输层用途和原有 retention 设置，不关闭自动缓存。此策略面向仅使用 GPT-5.6+、无需按用户或会话隔离缓存核算的场景，对所有模型统一生效。[OpenAI API 文档](https://developers.openai.com/api/docs/guides/prompt-caching.md#prompt-cache-keys)说明这些模型无需 key 来优化路由；ChatGPT 后端的实际行为仍需以观测为准。
 
+## 缓存复用动机与限制
+
+pi-ai 原本将请求的 `sessionId` 用作 `prompt_cache_key`，相当于按会话分组。根据上述 OpenAI API 文档，GPT-5.6+ 自动处理缓存路由，key 主要用于分开缓存核算；本部署没有这种隔离需求，因此省略 key，避免不必要的会话级分组，可能有利于跨 session 复用相同前缀。它不是缓存开关，也不会让不同内容共享 KV 状态。
+
+这不是已验证的命中率提升：仍需满足完整渲染前缀匹配、可用的缓存断点、缓存存续及模型设置一致等条件。此 route 使用 ChatGPT 后端，而非文档中的 OpenAI API，实际缓存语义与收益需通过真实请求观测；单元测试只验证请求改写。该策略只影响 `codex-live`，不影响 DeepSeek API route。
+
 ## 验证
 
 在仓库根目录运行 `node --test codex-live/prompt-cache.test.js`，验证请求体 key 删除、原回调兼容及会话/retention 设置保留；这些测试不发送真实请求。

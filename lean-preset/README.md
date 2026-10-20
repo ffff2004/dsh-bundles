@@ -36,7 +36,14 @@
 
 这是稳定分区：基础工具和额外工具各自保留传入的相对顺序；未注册或不可见的工具不会被添加，也不会因此报错。插件不修改 schema、prompt sections、runtime context 或权限，不发布服务，不覆盖宿主 `toolOrder`，不影响 `lean` 或其他 preset。注册随 preset scope 卸载；后续外层 waterfall 仍可能重新排序。
 
-此策略仅用于对齐两个 preset 的共同工具前缀，不保证 GPT-5.6+ 的 prefix cache 命中率提高；服务端缓存还依赖匹配断点、完整渲染前缀和后端行为。
+### 为什么可能改善缓存复用
+
+默认按工具名称排序时，`cordis_inspect_*` 会插在基础工具之间，提前打断 `lean` 与 `lean-cordis` 的共同工具前缀。将独有工具后置后，工具序列变为 `lean = [共同工具]`、`lean-cordis = [共同工具][额外工具]`。如果服务端渲染保留这种顺序，且前面没有其他差异，就可能增加跨 preset、跨 session 的公共输入前缀长度。同一 preset 的排序本来就稳定，不能据此推断其跨 session 命中率会额外提高。
+
+- **DeepSeek API：**[上下文硬盘缓存文档](https://api-docs.deepseek.com/zh-cn/guides/kv_cache/)说明，系统会检测多次请求的公共前缀并将其独立落盘，也会在长输入/输出中按固定 token 间隔落盘。因此更长的共同工具前缀有机会成为可复用的缓存前缀单元；新检测的公共前缀不一定立即命中，构建为秒级，缓存仍是尽力而为。
+- **GPT-5.6+：**[OpenAI 缓存文档](https://developers.openai.com/api/docs/guides/prompt-caching.md#how-prefix-matching-works)说明，查找依赖合格消息结束位置或显式 breakpoint，而非任意 token 位置。工具列表中的共同前缀末尾不一定是可用断点，因此仅对齐 schema 顺序不足以保证收益；ChatGPT 后端也不保证与该 API 文档完全一致。
+
+此排序只改变工具 schema 的顺序，不同步重排系统提示中的工具指导、Skills catalog 或其他消息；这些内容及服务端隐藏渲染也可能提前打断公共前缀。尚未通过真实请求验证缓存收益。DeepSeek 可比较多次预热后交替使用两个 preset 的 `usage.prompt_cache_hit_tokens` / (`prompt_cache_hit_tokens` + `prompt_cache_miss_tokens`)；OpenAI API 可比较 `usage.input_tokens_details.cached_tokens`、`cache_write_tokens` 和实际成本，并保持模型、设置及其余输入条件一致。
 
 在仓库根目录运行 `node --test lean-preset/tool-order.test.js` 验证稳定排序、waterfall 兼容和挂载范围。
 

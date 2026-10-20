@@ -6,12 +6,11 @@ export const inject = ['systemPrompt', 'tools']
 
 export const Config = z.object({
   jobsWaitMode: z.union(['yield', 'blocking']).default('yield').description(
-    'yield adds guidance to end the turn while awaiting job notifications; blocking adds a short instruction not to yield solely for those notifications. Use blocking for quiet delivery or a wake budget that may run out. This does not change tool-jobs configuration.',
+    'yield adds guidance to end the turn while awaiting job notifications; blocking adds no jobs guidance and leaves waiting behavior to the model. Use blocking for quiet delivery or a wake budget that may run out. This does not change tool-jobs configuration.',
   ),
 })
 
 const jobsYield = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be notified when a job finishes. A waiting update is not a completion report.'
-const jobsBlocking = 'Do not yield solely to await job completion notifications; use job_output with wait: true instead.'
 const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be notified when a subagent finishes or sends a message. A waiting update is not a completion report.'
 
 /** Register independently owned system prompt sections for optional background capabilities. */
@@ -25,7 +24,7 @@ export function apply(ctx, config = {}) {
       interpolate: false,
       text: ({ scope }) => jobCtx.tools.get('job_output', scope) === undefined
         ? ''
-        : jobsWaitMode === 'yield' ? jobsYield : jobsBlocking,
+        : jobsWaitMode === 'yield' ? jobsYield : '',
     })
   })
 

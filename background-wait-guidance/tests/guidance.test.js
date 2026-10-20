@@ -42,7 +42,6 @@ async function fixture(t, config = {}) {
 const jobsSection = 'local-background-wait-jobs'
 const subagentsSection = 'local-background-wait-subagents'
 const jobsYield = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be notified when a job finishes. A waiting update is not a completion report.'
-const jobsBlocking = 'Do not yield solely to await job completion notifications; use job_output with wait: true instead.'
 const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be notified when a subagent finishes or sends a message. A waiting update is not a completion report.'
 
 test('defaults to yield and rejects unsupported jobs modes', () => {
@@ -80,15 +79,16 @@ test('subagents work without jobs', async t => {
   assert.deepEqual(await sectionNames(), [])
 })
 
-test('blocking mode registers jobs and subagent sections independently', async t => {
-  const { ctx, sectionNames } = await fixture(t, { jobsWaitMode: 'blocking' })
+test('blocking mode omits jobs guidance without affecting subagent guidance', async t => {
+  const { ctx, scope, sectionNames } = await fixture(t, { jobsWaitMode: 'blocking' })
   ctx.plugin(capability('jobs'))
   await settle(ctx)
-  assert.deepEqual(await sectionNames(), [jobsSection])
+  assert.deepEqual(await sectionNames(), [])
+  assert.equal(renderPrompt(await ctx.systemPrompt.assemble({ scope })), '')
   assert.deepEqual(await sectionNames({}), [])
   ctx.plugin(capability('subagents'))
   await settle(ctx)
-  assert.deepEqual(await sectionNames(), [jobsSection, subagentsSection])
+  assert.deepEqual(await sectionNames(), [subagentsSection])
 })
 
 test('tool visibility is evaluated per scope on every assembly', async t => {
@@ -116,7 +116,7 @@ test('plugin disposal and reload preserve section registration across jobs modes
   assert.deepEqual(await sectionNames(), [])
   const blockingFork = ctx.plugin(plugin, { jobsWaitMode: 'blocking' })
   await settle(ctx)
-  assert.deepEqual(await sectionNames(), [jobsSection, subagentsSection])
+  assert.deepEqual(await sectionNames(), [subagentsSection])
   await blockingFork.dispose()
   ctx.plugin(plugin, { jobsWaitMode: 'yield' })
   await settle(ctx)
@@ -129,13 +129,14 @@ for (const jobsWaitMode of ['yield', 'blocking']) {
     ctx.plugin(capability('jobs'))
     ctx.plugin(capability('subagents'))
     await settle(ctx)
-    const expected = `${jobsWaitMode === 'yield' ? jobsYield : jobsBlocking}\n\n${subagentsYield}`
+    const expected = jobsWaitMode === 'yield' ? `${jobsYield}\n\n${subagentsYield}` : subagentsYield
     const before = await ctx.systemPrompt.assemble({ scope })
     assert.equal(renderPrompt(before), expected)
     assert.equal(renderContextSnapshot(before), '')
     assert.deepEqual(before.contexts, [])
     const guidance = before.sections.filter(section => section.name.startsWith('local-background-wait-'))
-    assert.deepEqual(guidance.map(section => section.name), [jobsSection, subagentsSection])
+    assert.deepEqual(guidance.filter(section => section.text.length > 0).map(section => section.name),
+      jobsWaitMode === 'yield' ? [jobsSection, subagentsSection] : [subagentsSection])
     assert.ok(guidance.every(section => section.interpolate === false))
 
     const restore = ctx.systemPrompt.suppressRuntimeContext()

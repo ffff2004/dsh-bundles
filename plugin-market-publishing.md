@@ -12,16 +12,25 @@ CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 U
 4. 若 `github-pages` environment 有分支限制，允许 `main` 以及用于发布的 tags；有审批规则时需完成审批。
 5. 确认工作流部署成功，打开 [README](<README.md>) 中的市场索引 URL，应直接得到 JSON（HTTP 200，不能重定向）；随后在 DSH 添加索引源。
 
-触发条件为 `main` 推送、任意 tag 推送及手动运行。
-Pull request 只生成和校验 artifact，不部署；手动运行也只允许 `main` 或 tag 部署。
+自动发布仅由 `<完整包名>@<version>` 格式的 tag 推送触发，例如 `@local/dsh-shell-timeout-guidance@1.2.0`。
+工作流先匹配含 `@` 的 tag，再确认生成索引确实收录了对应包、版本及该 tag 的 commit；不匹配则失败，不部署。
+普通 `main` 推送不触发工作流；仍可手动运行，并仅允许在 `main` 或 tag 上部署。
+Pull request 只生成和校验 artifact，不部署。
 
 ## 发布与失败处理
 
 - 修改 bundle 时同步递增其 `package.json` 中的 SemVer 版本。
-- 如需保留历史版本，给包含该版本 manifest 的 commit 打 tag 并推送。支持统一 `vX.Y.Z` / `X.Y.Z`，
-  或单包 `<name>@X.Y.Z`，例如 `@local/dsh-shell-timeout-guidance@1.1.0`。
-  统一 tag 只收录 manifest 版本与 tag 相符的包；单包 tag 更适合各 bundle 独立发布。
-- 默认分支上各包的当前版本也会被收录；同一个版本已有 tag 时，tag 优先。
+- 发布单个 bundle 时，先将包含该版本 manifest 的 commit 合并并推送到默认分支，再给该 commit 打 `<完整包名>@<version>` tag 并推送。
+  包名必须等于该 bundle 的 `package.json` 中的 `name`，版本必须等于其中的 `version`（精确 SemVer）。
+  例如发布 `shell-timeout-guidance` 的 `1.2.0`：
+  ```bash
+  git tag '@local/dsh-shell-timeout-guidance@1.2.0' <release-commit>
+  git push origin 'refs/tags/@local/dsh-shell-timeout-guidance@1.2.0'
+  ```
+  tag 发布后保持不变；后续修改递增版本并创建新 tag。
+- 生成器也识别统一 `vX.Y.Z` / `X.Y.Z` tag，但本工作流不会因这类 tag 自动发布；手动生成时仍会收录它们。
+- 索引收录范围沿用原生生成器：默认分支上各包的当前版本也会被收录；同一个版本已有 tag 时，tag 优先。
+  限制发布触发条件不等于“仅收录已打 tag 的版本”，给一个包打 tag 也可能同时更新其他包的默认分支版本。
   只改代码而不递增版本号，不应视为一次新发布，尤其不能用它更新已打 tag 的版本。
 - 生成器读取的是远端 refs，不是本地工作树；未推送的修改不会进入索引。
   PR 校验因此只验证生成流程，不保证尚未合并的 bundle 修改可被正确收录。

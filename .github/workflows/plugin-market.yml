@@ -2,8 +2,8 @@ name: Publish plugin market
 
 on:
   push:
-    branches: [main]
-    tags: ['**']
+    # Match scoped and unscoped package tags; exact validity is checked below.
+    tags: ['**@*']
   pull_request:
   workflow_dispatch:
 
@@ -75,15 +75,26 @@ jobs:
             --title 'ffff2004 DSH Bundles' \
             --description 'Personal DeepSeek Harness bundles by ffff2004'
 
-      # A source failure already exits nonzero. Also reject a successful but
-      # empty result (for example, all bundles skipped for invalid manifests).
-      - name: Reject an empty market
+      # A source failure already exits nonzero. Reject empty results and tag
+      # pushes that the generator did not include at the tagged commit.
+      - name: Validate generated market and release tag
         run: |
           node --input-type=module <<'JS'
+          import { execFileSync } from 'node:child_process';
           import { readFileSync } from 'node:fs';
           const index = JSON.parse(readFileSync('_site/index.json', 'utf8'));
           if (!Array.isArray(index.plugins) || index.plugins.length === 0) {
             throw new Error('Refusing to publish an empty plugin market');
+          }
+          if (process.env.GITHUB_EVENT_NAME === 'push') {
+            const tag = process.env.GITHUB_REF_NAME;
+            const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            const included = index.plugins.some(plugin => plugin.versions.some(version =>
+              `${plugin.name}@${version.version}` === tag
+              && version.source.type === 'git' && version.source.commit === commit));
+            if (!included) {
+              throw new Error(`Release tag ${tag} was not indexed at ${commit}; use <package-name>@<version> matching the bundle manifest`);
+            }
           }
           console.log(`Validated market: ${index.plugins.length} plugins`);
           JS

@@ -45,6 +45,11 @@
 - 挂载时读一次缓存并注册 route；`llm/adapters-updated` 会让已打开的模型选择器刷新，无需重启。
 - codex 刷新缓存或 token 后，插件重建 catalog；**只有** id/名称/窗口/模态/reasoning 这一组签名变化时才重新注册，避免无谓 reload。
 - 日志（`codex-live:` 前缀）会逐条说明哪些模型是合成的、用了哪个模板、窗口与档位是什么，以及 token 是否临近过期。
+- 两条请求路径（`stream` / `streamSimple`）都通过 `onPayload` 在原回调执行后删除最终请求体的 `prompt_cache_key`；保留 `sessionId` 的传输层用途和原有 retention 设置，不关闭自动缓存。此策略面向仅使用 GPT-5.6+、无需按用户或会话隔离缓存核算的场景，对所有模型统一生效。[OpenAI API 文档](https://developers.openai.com/api/docs/guides/prompt-caching.md#prompt-cache-keys)说明这些模型无需 key 来优化路由；ChatGPT 后端的实际行为仍需以观测为准。
+
+## 验证
+
+在仓库根目录运行 `node --test codex-live/prompt-cache.test.js`，验证请求体 key 删除、原回调兼容及会话/retention 设置保留；这些测试不发送真实请求。
 
 ## 已知取舍
 

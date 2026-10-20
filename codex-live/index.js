@@ -48,6 +48,8 @@ import { openAICodexResponsesApi } from '@earendil-works/pi-ai/api/openai-codex-
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import z from '@deepseek-ai/schemastery'
 
+import { withoutPromptCacheKey } from './prompt-cache.js'
+
 /** The pi-ai catalog route this provider mirrors; its entries are the metadata source. */
 const CATALOG_PROVIDER = 'openai-codex'
 
@@ -307,8 +309,8 @@ export function apply(ctx, config) {
       },
     },
     getModels: () => current.models,
-    stream: (model, context, options) => api.stream(model, context, options),
-    streamSimple: (model, context, options) => api.streamSimple(model, context, options),
+    stream: (model, context, options) => api.stream(model, context, withoutPromptCacheKey(options)),
+    streamSimple: (model, context, options) => api.streamSimple(model, context, withoutPromptCacheKey(options)),
   }
 
   profiles = new Map([[route, profileFor(current.models)]])

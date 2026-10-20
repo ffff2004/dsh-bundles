@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Subagent Wait Guidance",
+    "description": "Tell users which subagents are pending, then yield for completion or message notifications. Independent of jobs guidance; does not change subagent execution."
+  }
+}

@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Background Wait Guidance",
-    "description": "Tell users what is pending, then yield for background completion notifications instead of polling. Jobs guidance can be disabled to preserve the model's default waiting behavior when automatic wakeup is unavailable."
+    "description": "Independent jobs and subagent guidance plugins: tell users what is pending, then yield for completion notifications instead of polling."
   }
 }

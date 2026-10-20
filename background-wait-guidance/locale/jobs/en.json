@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Jobs Wait Guidance",
+    "description": "Tell users which background jobs are pending, then yield for completion notifications. Disable when automatic wakeup is unavailable; does not change tool-jobs behavior."
+  }
+}

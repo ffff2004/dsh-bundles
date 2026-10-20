@@ -7,9 +7,7 @@
 # defaults, so the first-party guidance section of every tool this preset mounts
 # and the dynamic runtime-context snapshot reach the model. The prefix is this
 # preset's own opener and the suffix carries the working directory, matching
-# `standard`'s placement. The first row then suppresses the three host sections
-# this preset does not want — harness identity, harness source, and Web surface —
-# and fails the turn if that suppression ever stops working. The `skill` catalog
+# `standard`'s placement. Host prompt sections are retained. The `skill` catalog
 # and the `agent-instructions` baseline arrive as pre-step messages rather than
 # prompt sections, so they reach this agent either way.
 #
@@ -27,18 +25,6 @@
         description: 标准拼装的系统提示与一次性 bash，外加文件读写、Skills、Web、后台任务与委派工具。
         order: 5
         plugins:
-          # ── lean-only prompt suppression ──────────────────────────────────
-
-          # `harness:identity`, `harness:source`, and `app:web-surface` are
-          # registered on the GLOBAL prompt layer, which no preset configuration
-          # can remove one by one. This row shadows each with an empty same-name
-          # section in this preset's scope, then throws during assembly when the
-          # first-party text still reaches the model — so an upstream rename or
-          # move fails the turn instead of silently widening the prompt. See
-          # shadow.js for the section names and leak markers.
-          - id: shadow-harness-sections
-            name: '@local/dsh-lean-preset/shadow.js'
-
           # ── identity and workspace instructions ───────────────────────────
 
           - id: persona

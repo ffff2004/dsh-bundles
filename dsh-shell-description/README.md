@@ -13,7 +13,7 @@ Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 的一次性 `bash` / `pwsh
 
 ## 安装与验证
 
-通过 Harness 的 `plugin_manager install_bundle` 安装此目录。作用于当前 profile 的所有 preset。不要同时在 lean 中挂载旧 `shell-args.js`。
+通过 Harness 的 `plugin_manager install_bundle` 安装此目录。作用于当前 profile 的所有 preset。lean 中的旧 `shell-args.js` 入口已移除；旧 preset revision 如仍引用它，应迁移到新 revision。
 
 新建 lean / cordis 会话，检查实际工具 schema：无 `description` 参数，无要求填写它的句子；不传该参数的 shell 调用仍成功。现有模型历史可能仍含旧参数说明，不重写历史记录。
 

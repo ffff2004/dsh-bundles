@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "meta": {
-    "title": "Lean agent preset",
-    "description": "Declares the lean agent preset: standard prompt construction with filesystem, skill, web, background-job, reminder, and delegation tools."
+    "title": "Lean agent presets",
+    "description": "Declares lean and lean-cordis presets: lightweight tools, with Cordis inspection, official development skills, plugin management, and market tools in lean-cordis."
   },
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
 }

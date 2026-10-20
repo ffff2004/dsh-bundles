@@ -1,5 +1,5 @@
-# The `lean` agent preset as a bundle patch: the declaration the preset registry
-# mounts, inserted into the profile's composition.
+# The `lean` and `lean-cordis` agent presets as a bundle patch: independent
+# declarations mounted by the preset registry in the profile's composition.
 #
 # This is an AGENT-PLANE composition. The persona row below shadows the
 # deployment persona for this preset's sessions while keeping the `standard`
@@ -185,3 +185,88 @@
           # `userQuestions` independently; this preset does not mount plan mode.
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
+
+    # Independent declaration: keep its base rows aligned with `lean` above.
+    # Only Cordis inspection, official development skills, and plugin management
+    # are added; Host services and permission policy remain deployment-owned.
+    - id: preset-lean-cordis
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: lean-cordis
+        name: 轻量创造模式
+        description: 轻量模式的全部能力，外加 Cordis 接口检查、官方开发 Skills、插件管理与市场工具。
+        order: 6
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: You are a helpful assistant.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: tool-schedule
+            name: '@deepseek-ai/dsh-tool-schedule'
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+            config:
+              # Append official skills; preserve default project and user roots.
+              customSkillDirs:
+                - !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@deepseek-ai/dsh-agent-preset/package.json')), 'skills')
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: tool-subagent-control
+            name: '@deepseek-ai/dsh-tool-subagent-control'
+          - id: tool-subagent-list-agents
+            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+          - id: tool-subagent
+            name: '@deepseek-ai/dsh-tool-subagent'
+            config:
+              provider: spawn
+              toolName: subagent
+              modelSelectionSettings: true
+              # Kept aligned with lean; not in the current tool-subagent schema.
+              backgroundMode: continuable
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+          - id: tool-cordis
+            name: '@deepseek-ai/dsh-tool-cordis'
+          # Management tools require a profile and retain normal approval rules.
+          - id: tool-plugin-manager
+            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            disabled: !!js "!ctx.get('profileContext')"
+          - id: tool-plugin-market
+            name: '@deepseek-ai/dsh-plugin-market/tools'
+            disabled: !!js "!ctx.get('profileContext')"

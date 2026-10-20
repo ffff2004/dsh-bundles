@@ -4,7 +4,8 @@
 
 ## 主要功能
 
-- 提供一次性 Shell、文件读写、Skills、Web、后台任务与委派工具。
+- 提供一次性 Shell、文件读写、Skills、Web、后台任务、定时提醒与委派工具。
+- 定时提醒提供 `schedule_create/list/update/delete`，支持一次性、周期性及 Cron 规则；依赖宿主的 `@deepseek-ai/dsh-schedule` 服务，到期向原会话投递消息，执行依赖 DSH Host 运行。委派子代理不能使用提醒工具。
 - 加载用户全局及项目目录链中的 `AGENTS.md` 指令。
 
 ## 使用

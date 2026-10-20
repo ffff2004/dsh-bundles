@@ -23,7 +23,7 @@
       config:
         id: lean
         name: 轻量模式
-        description: 标准拼装的系统提示与一次性 bash，外加文件读写、Skills、Web、后台任务与委派工具。
+        description: 标准拼装的系统提示与一次性 bash，外加文件读写、Skills、Web、后台任务、定时提醒与委派工具。
         order: 5
         plugins:
           # ── identity and workspace instructions ───────────────────────────
@@ -80,6 +80,15 @@
           # bash's explicit run_in_background, not for managed subagent activations.
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
+
+          # ── reminders ─────────────────────────────────────────────────────
+
+          # The host `schedule` service owns persistence and delivery. This row
+          # only registers schedule_create/list/update/delete in the preset scope;
+          # it stays inert without that service. Delegated children cannot use
+          # reminders, even when their preset includes these tools.
+          - id: tool-schedule
+            name: '@deepseek-ai/dsh-tool-schedule'
 
           # ── context compaction ────────────────────────────────────────────
 

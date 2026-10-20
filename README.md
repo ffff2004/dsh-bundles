@@ -1,6 +1,6 @@
 # 本地 DSH Bundles
 
-本仓库存放 DeepSeek Harness（DSH）的本地 bundle。各 bundle 的功能、配置与使用限制见下方子 README。
+本仓库存放个人自用的 DeepSeek Harness（DSH）bundles。
 
 ## Bundle 列表
 

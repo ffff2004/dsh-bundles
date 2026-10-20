@@ -25,6 +25,21 @@
 
 两个 preset 是独立的完整声明，不存在 `extends` 继承。维护时应同步基础插件清单，避免基础能力漂移。
 
+## 工具排序
+
+仅 `lean-cordis` 挂载本 bundle 的 `@local/dsh-lean-preset/tool-order` 插件，通过 scope-filtered 的 `system-prompt/assemble` waterfall，在 `await next()` 返回后将以下四个额外工具移到尾部：
+
+- `cordis_inspect_list`
+- `cordis_inspect_query`
+- `plugin_manager`
+- `plugin_market`
+
+这是稳定分区：基础工具和额外工具各自保留传入的相对顺序；未注册或不可见的工具不会被添加，也不会因此报错。插件不修改 schema、prompt sections、runtime context 或权限，不发布服务，不覆盖宿主 `toolOrder`，不影响 `lean` 或其他 preset。注册随 preset scope 卸载；后续外层 waterfall 仍可能重新排序。
+
+此策略仅用于对齐两个 preset 的共同工具前缀，不保证 GPT-5.6+ 的 prefix cache 命中率提高；服务端缓存还依赖匹配断点、完整渲染前缀和后端行为。
+
+在仓库根目录运行 `node --test lean-preset/tool-order.test.js` 验证稳定排序、waterfall 兼容和挂载范围。
+
 ## 使用
 
 通过 Harness Plugin Manager 安装本目录，然后在新会话中选择“轻量模式”或“轻量创造模式”。包名为 `@local/dsh-lean-preset`。更新 bundle 后，已有会话保留原 preset 版本，新建会话使用新版本。

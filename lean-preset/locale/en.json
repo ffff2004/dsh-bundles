@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Lean agent presets",
+    "description": "Lightweight lean and lean-cordis presets; Cordis-only tools follow the common tools in lean-cordis."
+  }
+}

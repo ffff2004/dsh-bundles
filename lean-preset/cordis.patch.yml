@@ -261,6 +261,10 @@
               backgroundMode: continuable
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
+          # Scope-filtered assembly policy: keep the shared lean tools first.
+          # Consumes the Host systemPrompt service; publishes no service.
+          - id: tool-order
+            name: '@local/dsh-lean-preset/tool-order'
           - id: tool-cordis
             name: '@deepseek-ai/dsh-tool-cordis'
           # Management tools require a profile and retain normal approval rules.

@@ -6,13 +6,14 @@
 # prompt construction: `complete` and `includeRuntimeContext` stay at their
 # defaults, so the first-party guidance section of every tool this preset mounts
 # and the dynamic runtime-context snapshot reach the model. The prefix is this
-# preset's own opener and the suffix carries the working directory, matching
-# `standard`'s placement. Host prompt sections are retained. The `skill` catalog
+# preset's own opener; the omitted suffix defaults to empty, as in `standard`.
+# Other host prompt sections are retained. The `skill` catalog
 # and the `agent-instructions` baseline arrive as pre-step messages rather than
 # prompt sections, so they reach this agent either way.
 #
-# Plane rule: every row below registers into a HOST registry (`systemPrompt`,
-# `tools`, `skills`) and publishes no service, so none needs an `isolate` realm.
+# Plane rule: most rows below contribute to HOST registries (`systemPrompt`,
+# `tools`, `skills`) without publishing services and need no `isolate` realm.
+# The compaction group isolates its service providers and consumers together.
 # The host composition keeps the registries themselves and the `shell` executor,
 # `shell-env`, `fs`, `web`, `skills`, `attachments`, and sandbox/approval
 # services these rows consume.
@@ -73,13 +74,10 @@
 
           # ── background jobs ───────────────────────────────────────────────
 
-          # The job REGISTRY stays on the host plane: it is keyed by owning
-          # agent, so one host instance serves every session, and an
-          # entry-local realm here would be invisible to the producer rows above
-          # and below. What this row contributes is the controller those
-          # producers require — without it, `tool-bash`'s and the background
-          # subagents' `run_in_background` refuses with "background jobs
-          # unavailable" — plus the three `job_*` tools and completion delivery.
+          # The job registry stays on the host plane and tracks each job's owning
+          # agent. This row provides the job controller, job_output/job_list/
+          # job_kill, and completion delivery. The controller is required for
+          # bash's explicit run_in_background, not for managed subagent activations.
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
 
@@ -135,16 +133,17 @@
 
           # ── delegation ────────────────────────────────────────────────────
 
-          # The `subagents` registry and its spawn/fork backends stay in the HOST
-          # composition: the registry is a process singleton whose cross-session
-          # queries the api-proxy serves to the browser, and a provider name may
-          # only be registered once. These rows contribute the delegation TOOLS
-          # that resolve that host registry and publish nothing themselves, so
-          # they sit loose — no realm.
+          # The shared `subagents` service and its spawn/fork backends stay in the
+          # HOST composition. Provider names must be unique within that registry
+          # while mounted; disposal allows re-registration. These rows contribute
+          # delegation tools that resolve the host service and publish no service
+          # themselves, so they need no realm.
           #
-          # `subagent` is the spawn provider's delegation tool, mounted once. Its
-          # continuable background mode is what lets a later `send_message` or
-          # `interrupt_agent` call steer or stop a child after it settles.
+          # `subagent` is the spawn provider's delegation tool, mounted once.
+          # Each delegation starts a managed activation and returns the child id;
+          # the subagent runtime owns result delivery and resource cleanup.
+          # `send_message` can continue a settled child; `interrupt_agent` requests
+          # that a running child stop. Neither depends on a background-mode switch.
           #
           # `modelSelectionSettings` reads the host's `subagentModelSelection`
           # service and registers `list_subagent_models` for an agent whose
@@ -162,6 +161,7 @@
               provider: spawn
               toolName: subagent
               modelSelectionSettings: true
+              # Legacy field: not declared by the current tool-subagent schema.
               backgroundMode: continuable
 
           # ── presentation ──────────────────────────────────────────────────
@@ -171,8 +171,8 @@
           # sits loose — no realm.
           #
           # `ask_user_question` (`@deepseek-ai/dsh-tool-ask-user`) is deliberately
-          # NOT mounted: a lean session never asks the user a question mid-turn.
-          # The host still registers `userQuestions`, which approvals and plan
-          # mode use independently of this tool.
+          # NOT mounted: there is no structured mid-turn question tool, but the
+          # agent can still ask questions in ordinary replies. Host approvals use
+          # `userQuestions` independently; this preset does not mount plan mode.
           - id: present
             name: '@deepseek-ai/dsh-tool-present'

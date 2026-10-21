@@ -3,12 +3,13 @@
 [工作流](<.github/workflows/plugin-market.yml>) 使用 DSH 官方 reference generator，自动生成索引及图标并分发到 GitHub Pages；不需要自建后端，也不向 Git 提交生成结果。
 CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 URL，在 runner 临时目录生成输入清单，
 由生成器从远端默认分支发现各 bundle 子目录。无需在仓库中维护静态清单，临时清单也不会进入 Pages artifact。
+同一工作流的 `test` job 在 PR、tag 和手动运行时先安装 workspace 依赖并执行 `pnpm -r test`；部署要求 `build` 与 `test` 都通过。
 
 ## 首次启用
 
 1. 将本次配置推送到 GitHub 的 `main` 分支。
 2. 在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
-3. 在 **Actions → Publish plugin market → Run workflow** 选择 `main` 运行。
+3. 在 **Actions → Test bundles and publish plugin market → Run workflow** 选择 `main` 运行。
 4. 若 `github-pages` environment 有分支限制，允许 `main` 以及用于发布的 tags；有审批规则时需完成审批。
 5. 确认工作流部署成功，打开 [README](<README.md>) 中的市场索引 URL，应直接得到 JSON（HTTP 200，不能重定向）；随后在 DSH 添加索引源。
 

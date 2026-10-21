@@ -1,4 +1,4 @@
-name: Publish plugin market
+name: Test bundles and publish plugin market
 
 on:
   push:
@@ -20,6 +20,34 @@ env:
   DSH_REF: 687f282e8625c6b8d11ff58211a90524be2e4317
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Keep in step with the committed lockfile and local development.
+          version: 11.25.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run bundle tests
+        run: pnpm -r test
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -106,7 +134,7 @@ jobs:
 
   deploy:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

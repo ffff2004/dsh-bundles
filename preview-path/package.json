@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-preview-path",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "Make Web UI paths editable and browse directories by path, opening the typed file or directory in place.",

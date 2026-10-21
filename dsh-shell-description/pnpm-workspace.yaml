@@ -1,0 +1,3 @@
+autoInstallPeers: true
+ignoreScripts: true
+verifyDepsBeforeRun: false

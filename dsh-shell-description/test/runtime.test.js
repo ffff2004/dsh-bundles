@@ -4,12 +4,18 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 
-// Test-only dependencies: never installed into this dependency-free plugin.
-// Override with the node_modules directory of another compatible DSH installation.
+// Test-only devDependencies: consumers never install them, so the plugin stays dependency-free.
+// Override with another compatible DSH installation's node_modules to test that version.
 const runtimeModules = process.env.DSH_RUNTIME_NODE_MODULES
-  ?? '/home/fym/.local/share/pnpm/store/v11/links/@deepseek-ai/dsh/0.2.1-rc.2/444e1b9818a822fce99271929c37647539116e3358cd15eb8935efcef81967bb/node_modules'
-const installation = createRequire(resolve(runtimeModules, '__runtime_test__.cjs'))
-const bashPath = installation.resolve('@deepseek-ai/dsh-tool-bash')
+const installation = createRequire(runtimeModules === undefined
+  ? import.meta.url
+  : resolve(runtimeModules, '__runtime_test__.cjs'))
+let bashPath
+try {
+  bashPath = installation.resolve('@deepseek-ai/dsh-tool-bash')
+} catch {
+  throw new Error('Runtime test dependencies are missing; run `pnpm install` in this bundle directory, or set DSH_RUNTIME_NODE_MODULES to a compatible DSH installation.')
+}
 const peers = createRequire(bashPath)
 const loadPeer = name => import(pathToFileURL(peers.resolve(name)).href)
 const [{ Context }, { ToolRuntime }, { SystemPrompt }, { AgentRegistry }, ToolBash] = await Promise.all([

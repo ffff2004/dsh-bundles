@@ -129,7 +129,11 @@ const ctx = {
     },
   },
   sidebarRightTabs: { register: (definition) => { types.push(definition); return () => {} } },
-  sidebarRight: { openTab: (kind, options) => { tabs.push({ kind, options }) } },
+  sidebarRight: {
+    openTab: (kind, options) => { tabs.push({ kind, options }) },
+    focusedTarget: () => ({ tabId: 'toolbar-tab' }),
+    isTargetCurrent: () => true,
+  },
   remote: {
     workspaceFiles: {
       stat: async () => ({ ok: true, value: {} }),
@@ -143,6 +147,7 @@ plugin.apply(ctx)
 check('one tab type', types.length === 1, String(types.length))
 const type = types[0]
 check('directory kind', type?.kind === 'preview-path-directory', type?.kind)
+check('directory pages allow multiple instances', type?.multiple === true)
 check('page claims no address', type?.patterns === undefined, String(type?.patterns))
 check('tab title thunk', type?.title('sidebar://x') === 'tab.title', type?.title('sidebar://x'))
 check('guide entry', type?.guide?.length === 1 && type.guide[0].title() === 'guide.title')
@@ -190,7 +195,8 @@ check('menu dismisses itself', dismissed)
 check('menu opens the directory page', tabs.length === 1
   && tabs[0].kind === 'preview-path-directory'
   && tabs[0].options.params.path === 'src/a b.md'
-  && tabs[0].options.replaceTab === 'tab-1', JSON.stringify(tabs))
+  && tabs[0].options.replaceTab === 'tab-1'
+  && tabs[0].options.revealIfOpened === false, JSON.stringify(tabs))
 check('menu hidden off a file address', menuRow.component({
   tab: { id: 'tab-2', contentId: 'sidebar://guide' }, dismiss: () => {}, t: say,
 }) === null)
@@ -201,7 +207,9 @@ const previewRow = registrations.find(row => row.options.name === 'sidebar.right
 const renderToolbar = (row, absolutePath) => {
   const fieldElement = row.component({ absolutePath, sessionId: 's1', t: say })
   const toolbar = fieldElement.type(fieldElement.props)
-  return toolbar.props.children[1].props.children[0]
+  const button = toolbar.props.children[1].props.children[0]
+  if (button) button.props.ref.current = {}
+  return button
 }
 const upButton = renderToolbar(previewRow, '/repo/src/deep/file.ts')
 check('parent button rendered', upButton?.props?.['data-preview-path-parent'] === '', String(upButton?.type))
@@ -209,7 +217,9 @@ tabs.length = 0
 upButton.props.onClick()
 check('parent opens the directory page', tabs.length === 1
   && tabs[0].kind === 'preview-path-directory'
-  && tabs[0].options.params.path === '/repo/src/deep', JSON.stringify(tabs))
+  && tabs[0].options.params.path === '/repo/src/deep'
+  && tabs[0].options.replaceTab === 'toolbar-tab'
+  && tabs[0].options.revealIfOpened === false, JSON.stringify(tabs))
 check('parent disabled at a filesystem root', renderToolbar(previewRow, '/file.ts').props.disabled === true)
 
 const filesRow = registrations.find(row => row.options.name === 'sidebar.right.tab.files.actions')

@@ -23,6 +23,8 @@ page so a path can be opened as a directory rather than only as a file.
   Session's workspace root, its pencil or path opens any directory, its rows
   switch directories on click and hand files to the document preview. The page
   lists through `workspaceFiles.list` and binds the tab's refresh command.
+  Directory tabs allow multiple instances, including multiple tabs for the
+  same path in the same pane. Opening from the guide creates another instance.
 - **Tab menu.** Any tab addressed at a file (a preview, including one whose
   metadata never resolved) gains "Open as directory" in its actions menu, which
   reopens that path as the directory page — the way out of a directory or
@@ -44,6 +46,27 @@ time with `sidebarRight.focusedTarget`, because those seats carry no tab id. The
 Host half registers nothing: every read is the preview's and the file tree's own
 `workspaceFiles` Remote, so the plugin adds no route, service, or extra access.
 
+## Navigation policy
+
+All ordinary path gestures navigate **in the source tab's place**: typing a
+file or directory, clicking a directory row or a file row, going to the parent,
+and choosing "Open as directory" in the tab menu. Every open carries
+`replaceTab` and `revealIfOpened: false`: another tab already showing that file
+or directory is never activated, changed, or closed by these gestures.
+
+Directory tabs register `multiple: true`, rather than being unique per pane.
+Their path comes only from `tab.navigation.params.path` (or the Session's cwd
+when opened without params); there is no independent local path state.
+
+The Host currently exposes no in-place page navigation method. Even a
+subdirectory click therefore opens a new instance **replacing** its source:
+a docked tab keeps its pane and strip position, but not its internal tab id.
+This also rebinds the new page's refresh command and cancels the old reads.
+Refresh itself only reloads; it does not navigate. Submitting the unchanged path
+only leaves edit mode. Invalid input keeps the source and reports the failure.
+The tab menu deliberately skips `stat`, letting the directory listing report
+whether the path is a directory.
+
 ## Layout
 
 | File | Role |
@@ -52,7 +75,8 @@ Host half registers nothing: every read is the preview's and the file tree's own
 | `cordis.patch.yml` | Inserts the one plugin row |
 | `index.js` | Host half: empty, the row exists to carry the Client row |
 | `client.js` | Browser half: the shared editor, the directory page, the tab-menu item, and the address grammar |
-| `check.mjs` | Self-check for the plugin surface, grammar, copy, tab type, menu item, and every slot registration (`node check.mjs`) |
+| `check.mjs` | Self-check for the plugin surface, grammar, copy, tab type, menu item, and every slot registration |
+| `navigation.test.mjs` | Real React behavioral tests for navigation intents, inputs, independent instances, refresh, cancellation, and stale targets (`pnpm test` runs both checks) |
 | `locale/{en,zh}.json` | Display metadata for the Plugin Manager |
 
 ## Install and remove
@@ -92,5 +116,10 @@ a page that was already open did not pick it up until reloaded. Later edits to
   outside or missing path. The preview toolbar's parent button has no listing to
   learn from, so previewing a file outside the workspace opens a parent the
   listing then refuses, with the path left editable.
-- Replacing a tab drops its previous content from the sidebar history; reopen it
-  from the conversation, the file tree, or the tab menu's directory page.
+- Navigation replaces the tab record; it is not a stable-id, back/forward
+  browser history. The Host does not persist page navigation params with layout:
+  undo, tab duplication, or restart restoration may lose a directory's path and
+  show the workspace root instead. No plugin-owned persistence is added here.
+- Replacing a floating tab currently opens its replacement in the active docked
+  pane, not in the floating window. This is the Host's `replaceTab` behavior for
+  file previews too; preserving a floating occurrence needs an upstream change.

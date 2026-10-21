@@ -12,12 +12,16 @@
     "./icon": "./icon.svg"
   },
   "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
-  "scripts": { "test": "node check.mjs" },
+  "scripts": { "test": "node check.mjs && node --test navigation.test.mjs" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": {
       "platform": "web",
       "inject": ["@deepseek-ai/dsh-client-ui-sidebar-documentpreview"]
     }
+  },
+  "devDependencies": {
+    "react": "18.3.1",
+    "react-test-renderer": "18.3.1"
   }
 }

@@ -23,7 +23,8 @@
  * non-regular path (a directory, or a link to one) opens the directory page;
  * anything else stays in the editor with a localized reason. The directory page
  * lists through `workspaceFiles.list`, which is workspace-scoped, and follows a
- * file row into the document preview.
+ * file row into the document preview. Every path gesture replaces its source
+ * tab without revealing another open tab; directory pages allow multiple instances.
  *
  * Why the directory page exists instead of claiming directory addresses: a tab
  * type's `canOpen(address)` is synchronous, so no plugin can tell a directory
@@ -479,6 +480,21 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * All path gestures replace their source, never reveal another tab. Page
+     * instances have distinct addresses (`multiple`), including for equal paths.
+     * The Host has no public in-place page navigation: replacement is the same
+     * placement mechanism used when switching from a file to another file.
+     */
+    function createPathNavigator(opener, sessionId, replaceTab) {
+      if (replaceTab === undefined) throw new Error('Path navigation needs a source tab')
+      return (path, kind) => {
+        const place = { replaceTab, revealIfOpened: false }
+        if (kind === 'file') opener.openResource(fileAddress(sessionId, path), place)
+        else opener.openTab(DIRECTORY_KIND, { ...place, params: { path } })
+      }
+    }
+
+    /**
      * Bind one path editor to the Sidebar and the Remote face.
      * @param ctx - the plugin context carrying `sidebarRight` and `remote`.
      * @returns the shared path field component.
@@ -487,15 +503,13 @@ window.__ModuleLoader__.load({
       /**
        * The path control: a pencil while idle, the path editor once opened.
        *
-       * A toolbar placement runs its own open: a file replaces the tab that
-       * holds the control, a directory opens the directory page in its place.
-       * An inline placement (the directory page's own header) is given `open`,
-       * because there the file replaces the page and a directory re-roots it.
+       * Every placement replaces its own tab. The inline directory header is
+       * given its tab-scoped navigation; toolbars resolve their source from DOM.
        *
        * @param props - the current path, the Session seat, copy, placement, and owners.
        * @returns the control and its editor, with the row's stylesheet.
        */
-      return function PathField({ absolutePath, sessionId, t, variant, hide, open, parent }) {
+      return function PathField({ absolutePath, sessionId, t, variant, hide, navigate, parent }) {
         const [editing, setEditing] = React.useState(false)
         const [draft, setDraft] = React.useState(absolutePath)
         const [failure, setFailure] = React.useState(undefined)
@@ -534,18 +548,18 @@ window.__ModuleLoader__.load({
           setEditing(true)
         }
 
-        /**
-         * Where a toolbar placement opens its result: this control's own tab.
-         * @param element - the control the gesture came from.
-         * @returns the placement, or nothing to let the Sidebar pick.
-         */
-        const placement = (element) => {
-          if (variant !== 'toolbar' || element === null) return {}
-          const tabs = ctx.sidebarRight
-          const target = tabs.focusedTarget(element)
-          return target !== undefined && target.tabId !== undefined && tabs.isTargetCurrent(target)
-            ? { replaceTab: target.tabId }
-            : {}
+        // Capture the source before the asynchronous stat, then validate it at
+        // commit time. An unresolved/stale source must never open a stray tab.
+        const navigation = (element) => {
+          if (navigate !== undefined) return navigate
+          const sidebar = ctx.sidebarRight
+          const target = element === null ? undefined : sidebar.focusedTarget(element)
+          return (path, kind) => {
+            if (target?.tabId === undefined || !sidebar.isTargetCurrent(target)) {
+              throw new Error('Path navigation source is no longer current')
+            }
+            createPathNavigator(sidebar, sessionId, target.tabId)(path, kind)
+          }
         }
 
         const submit = () => {
@@ -559,8 +573,7 @@ window.__ModuleLoader__.load({
             return
           }
           if (busy) return
-          const place = placement(box.current)
-          const address = fileAddress(sessionId, path)
+          const go = navigation(box.current)
           probe.current?.abort()
           const scope = new AbortController()
           probe.current = scope
@@ -571,21 +584,20 @@ window.__ModuleLoader__.load({
               if (scope.signal.aborted) return
               probe.current = undefined
               setBusy(false)
-              if (result.ok) {
-                stop()
-                if (open !== undefined) open.file(address)
-                else ctx.sidebarRight.openResource(address, place)
+              // Non-regular paths go to the directory page, which reports
+              // listing failures. A refused/stale navigation keeps the editor.
+              const kind = result.ok ? 'file'
+                : result.error?.code === 'workspace-file/not-regular-file' ? 'directory' : undefined
+              if (kind === undefined) {
+                setFailure(statFailure(result.error, t))
                 return
               }
-              // A non-regular path (a directory, or a link to one) is the
-              // directory page's business; that page reports anything else.
-              if (result.error?.code === 'workspace-file/not-regular-file') {
+              try {
+                go(path, kind)
                 stop()
-                if (open !== undefined) open.directory(path)
-                else ctx.sidebarRight.openTab(DIRECTORY_KIND, { ...place, params: { path } })
-                return
+              } catch {
+                setFailure(t('failed'))
               }
-              setFailure(statFailure(result.error, t))
             },
             () => {
               if (scope.signal.aborted) return
@@ -708,7 +720,7 @@ window.__ModuleLoader__.load({
           onClick: () => {
             if (parentPath === undefined) return
             try {
-              ctx.sidebarRight.openTab(DIRECTORY_KIND, { ...placement(up.current), params: { path: parentPath } })
+              navigation(up.current)(parentPath, 'directory')
             } catch {
               // A wiring refusal (no on-screen Session) leaves the row alone.
             }
@@ -740,20 +752,15 @@ window.__ModuleLoader__.load({
       return function DirectoryBody({ useTabInfo, sessionId, useSessions, t, list }) {
         const { tab } = useTabInfo()
         const cwd = useSessions(sessions => sessions.byId[sessionId]?.cwd)
-        const requested = tab.navigation.params?.path
-        const [path, setPath] = React.useState(requested)
+        // The tab's navigation is authoritative; never keep a second local
+        // path that can drift away from it. Guide opens default to the root.
+        const path = tab.navigation.params?.path ?? cwd
         const [nonce, setNonce] = React.useState(0)
         const [state, setState] = React.useState({ kind: 'loading' })
-
-        // A page opened without a path starts at the Session's workspace root.
-        React.useEffect(() => {
-          if (path === undefined && cwd !== undefined) setPath(cwd)
-        }, [path, cwd])
-
-        // A navigation that carries a path re-roots the same page.
-        React.useEffect(() => {
-          if (requested !== undefined) setPath(requested)
-        }, [tab.navigation.revision])
+        const navigate = (target, kind) => {
+          if (tab.signal.aborted) throw new Error('Directory tab is closed')
+          createPathNavigator(tab.actions, sessionId, true)(target, kind)
+        }
 
         React.useEffect(() => {
           if (path === undefined) return undefined
@@ -780,7 +787,6 @@ window.__ModuleLoader__.load({
         // about to replace it, so the page reads as loading until it does.
         const current = state.for === path ? state : undefined
         const parent = parentTarget(path, current?.kind === 'ready' ? current.value : undefined)
-        const openFile = (target) => { tab.actions.openResource(fileAddress(sessionId, target)) }
 
         const row = (entry) => {
           const target = path === undefined ? entry.name : joinPath(path, entry.name)
@@ -792,7 +798,7 @@ window.__ModuleLoader__.load({
               'data-preview-path-entry': kind,
               'data-preview-path-name': entry.name,
               disabled: kind === 'other',
-              onClick: kind === 'directory' ? () => { setPath(target) } : kind === 'file' ? () => { openFile(target) } : undefined,
+              onClick: kind === 'other' ? undefined : () => { navigate(target, kind) },
             },
               h(FileGlyph, { directory: kind === 'directory' }),
               h('span', { className: 'dsh-dir-name' }, entry.name)))
@@ -833,17 +839,14 @@ window.__ModuleLoader__.load({
               'aria-label': t('up'),
               title: t('up'),
               disabled: parent === undefined,
-              onClick: () => { if (parent !== undefined) setPath(parent) },
+              onClick: () => { if (parent !== undefined) navigate(parent, 'directory') },
             }, h(UpGlyph)),
             h(PathField, {
               absolutePath: path ?? '',
               sessionId,
               t,
               variant: 'inline',
-              open: {
-                file: (address) => { tab.actions.openResource(address, { replaceTab: tab.id }) },
-                directory: setPath,
-              },
+              navigate,
             }),
             h('button', {
               type: 'button',
@@ -931,6 +934,7 @@ window.__ModuleLoader__.load({
       return {
         id: DIRECTORY_ID,
         kind: DIRECTORY_KIND,
+        multiple: true,
         title: () => t('tab.title'),
         guide: [{
           id: 'directory',
@@ -964,7 +968,7 @@ window.__ModuleLoader__.load({
        * @param props - the menu's tab record, its dismiss hook, and copy.
        * @returns the item, or nothing for a tab that names no file path.
        */
-      return function OpenAsDirectory({ tab, dismiss, t }) {
+      return function OpenAsDirectory({ tab, sessionId, dismiss, t }) {
         const path = pathOfAddress(tab.contentId)
         if (path === undefined) return null
         return h('button', {
@@ -975,7 +979,7 @@ window.__ModuleLoader__.load({
           onClick: () => {
             dismiss()
             try {
-              ctx.sidebarRight.openTab(DIRECTORY_KIND, { params: { path }, replaceTab: tab.id })
+              createPathNavigator(ctx.sidebarRight, sessionId, tab.id)(path, 'directory')
             } catch {
               // A wiring refusal (no on-screen Session) leaves the menu closed.
             }
@@ -1036,8 +1040,8 @@ window.__ModuleLoader__.load({
           locale: NS,
         }, OpenAsDirectory)), 'preview-path: tab menu')
       },
-      // Pure helpers reached by `check.mjs` only; the loader ignores extra fields.
-      __test: { fileAddress, pathOfAddress, joinPath, parentOf, parentTarget, sortEntries, statFailure, listFailure },
+      // Test seams; the module loader ignores extra fields.
+      __test: { fileAddress, pathOfAddress, joinPath, parentOf, parentTarget, sortEntries, statFailure, listFailure, createPathNavigator },
     }
   },
 })

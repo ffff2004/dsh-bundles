@@ -92,6 +92,8 @@ importers:
 
   preview-download: {}
 
+  preview-path: {}
+
   shell-timeout-guidance:
     devDependencies:
       '@deepseek-ai/cordis':

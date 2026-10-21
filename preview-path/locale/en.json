@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Editable preview path",
+    "description": "Turns the document preview's path row into an editor that opens the typed workspace file in the same tab."
+  }
+}

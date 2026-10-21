@@ -1,12 +1,12 @@
 {
   "name": "@local/dsh-lean-preset",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "engines": { "dsh": ">=0.2.1-rc.2 <0.2.2-0" },
   "meta": {
     "title": "Lean agent presets",
-    "description": "Declares lean and lean-cordis presets: lightweight tools, with Cordis inspection, official development skills, plugin management, and market tools in lean-cordis."
+    "description": "Declares lean, lean-cordis, and lean-ptc presets: lightweight tools with optional Cordis development or programmatic tool calling."
   },
   "exports": {
     "./tool-order": "./tool-order.js",
@@ -17,5 +17,6 @@
   },
   "files": ["cordis.patch.yml", "tool-order.js", "locale/*.json", "tool-order-locale/*.json", "icon.svg", "README.md"],
   "scripts": { "test": "node --test" },
+  "devDependencies": { "yaml": "^2.8.1" },
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
 }

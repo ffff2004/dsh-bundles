@@ -44,8 +44,8 @@ async function fixture(t, { jobs = true, subagents = true } = {}) {
 
 const jobsSection = 'local-background-wait-jobs'
 const subagentsSection = 'local-background-wait-subagents'
-const jobsYield = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be notified when a job finishes. A waiting update is not a completion report.'
-const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be notified when a subagent finishes or sends a message. A waiting update is not a completion report.'
+const jobsYield = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be resumed when a job finishes. A waiting update is not a completion report.'
+const subagentsYield = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be resumed when a subagent finishes or sends a message. A waiting update is not a completion report.'
 
 test('bundle exposes two plugin rows and localized display resources', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))

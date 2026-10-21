@@ -10,9 +10,11 @@ page so a path can be opened as a directory rather than only as a file.
   `@deepseek-ai/dsh-client-ui-sidebar-documentpreview`. That seat renders for
   every file type the tab can show (text, code, markdown, HTML, image, PDF,
   Office, Excel), so one contribution covers them all. The pencil sits at the
-  row's left edge (`order: -1`), in front of the path it edits; while the editor
-  is open the preview's own `PathLabel` is hidden through its
-  `data-textpreview-path` marker and the editor claims the row's flex slot.
+  row's left edge (`order: -1`), in front of the path it edits, and a
+  parent-directory button sits left of it (`order: -2`) and opens the directory
+  page at the file's own directory; while the editor is open the preview's own
+  `PathLabel` is hidden through its `data-textpreview-path` marker and the
+  editor claims the row's flex slot.
 - **File tree toolbar.** The same control in `sidebar.right.tab.files.actions`,
   the seat the file tree offers after its reload button, hiding that tree's
   `data-files-path` row while it edits.

@@ -121,6 +121,9 @@ window.__ModuleLoader__.load({
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-interactive-bg-hover);
 }
+.dsh-preview-path-up {
+  order: -2;
+}
 .dsh-preview-path-tool:focus-visible,
 .dsh-dir-tool:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary);
@@ -473,13 +476,14 @@ window.__ModuleLoader__.load({
        * @param props - the current path, the Session seat, copy, placement, and owners.
        * @returns the control and its editor, with the row's stylesheet.
        */
-      return function PathField({ absolutePath, sessionId, t, variant, hide, open }) {
+      return function PathField({ absolutePath, sessionId, t, variant, hide, open, parent }) {
         const [editing, setEditing] = React.useState(false)
         const [draft, setDraft] = React.useState(absolutePath)
         const [failure, setFailure] = React.useState(undefined)
         const [busy, setBusy] = React.useState(false)
         const box = React.useRef(null)
         const field = React.useRef(null)
+        const up = React.useRef(null)
         const probe = React.useRef(undefined)
 
         // A probe belongs to this editor: leaving it cancels the Host question.
@@ -511,11 +515,15 @@ window.__ModuleLoader__.load({
           setEditing(true)
         }
 
-        /** Where a toolbar placement opens its result: this control's own tab. */
-        const placement = () => {
-          if (variant !== 'toolbar' || box.current === null) return {}
+        /**
+         * Where a toolbar placement opens its result: this control's own tab.
+         * @param element - the control the gesture came from.
+         * @returns the placement, or nothing to let the Sidebar pick.
+         */
+        const placement = (element) => {
+          if (variant !== 'toolbar' || element === null) return {}
           const tabs = ctx.sidebarRight
-          const target = tabs.focusedTarget(box.current)
+          const target = tabs.focusedTarget(element)
           return target !== undefined && target.tabId !== undefined && tabs.isTargetCurrent(target)
             ? { replaceTab: target.tabId }
             : {}
@@ -532,7 +540,7 @@ window.__ModuleLoader__.load({
             return
           }
           if (busy) return
-          const place = placement()
+          const place = placement(box.current)
           const address = fileAddress(sessionId, path)
           probe.current?.abort()
           const scope = new AbortController()
@@ -669,11 +677,32 @@ window.__ModuleLoader__.load({
           )
         }
 
+        const parentPath = parentOf(absolutePath)
+        const parentButton = parent === true && h('button', {
+          ref: up,
+          type: 'button',
+          className: 'dsh-dir-tool dsh-preview-path-up',
+          'data-preview-path-parent': '',
+          'aria-label': t('up'),
+          title: t('up'),
+          disabled: parentPath === undefined,
+          onClick: () => {
+            if (parentPath === undefined) return
+            try {
+              ctx.sidebarRight.openTab(DIRECTORY_KIND, { ...placement(up.current), params: { path: parentPath } })
+            } catch {
+              // A wiring refusal (no on-screen Session) leaves the row alone.
+            }
+          },
+        }, h(UpGlyph))
+
         return h(
           React.Fragment,
           null,
           h('style', null, STYLE),
-          editing ? editor : pencil,
+          editing
+            ? editor
+            : h(React.Fragment, null, parentButton, pencil),
         )
       }
     }
@@ -779,16 +808,7 @@ window.__ModuleLoader__.load({
               title: t('up'),
               disabled: parent === undefined,
               onClick: () => { if (parent !== undefined) setPath(parent) },
-            }, h(
-              'svg',
-              {
-                viewBox: '0 0 16 16', width: 15, height: 15, 'aria-hidden': true,
-                fill: 'none', stroke: 'currentColor', strokeWidth: 1.3,
-                strokeLinecap: 'round', strokeLinejoin: 'round',
-              },
-              h('path', { d: 'M8 12.5V4' }),
-              h('path', { d: 'M4.5 7.5 8 4l3.5 3.5' }),
-            )),
+            }, h(UpGlyph)),
             h(PathField, {
               absolutePath: path ?? '',
               sessionId,
@@ -820,6 +840,24 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dsh-dir-body', 'data-preview-path-body': '' }, content()),
         )
       }
+    }
+
+    /**
+     * The parent-directory glyph, shared by the preview toolbar and the
+     * directory page's own header.
+     * @returns the icon.
+     */
+    function UpGlyph() {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 16 16', width: 15, height: 15, 'aria-hidden': true,
+          fill: 'none', stroke: 'currentColor', strokeWidth: 1.3,
+          strokeLinecap: 'round', strokeLinejoin: 'round',
+        },
+        h('path', { d: 'M8 12.5V4' }),
+        h('path', { d: 'M4.5 7.5 8 4l3.5 3.5' }),
+      )
     }
 
     /**
@@ -954,7 +992,7 @@ window.__ModuleLoader__.load({
           id: 'preview-path',
           order: 10,
           locale: NS,
-        }, (props) => h(PathField, { ...props, variant: 'toolbar', hide: { root: '[data-textpreview-state]' } }))), 'preview-path: preview toolbar')
+        }, (props) => h(PathField, { ...props, variant: 'toolbar', parent: true, hide: { root: '[data-textpreview-state]' } }))), 'preview-path: preview toolbar')
 
         // The file tree's path row.
         ctx.effect(() => ctx.slots.inject('sidebar.right.tab.files.actions', () => ctx.slots.register({

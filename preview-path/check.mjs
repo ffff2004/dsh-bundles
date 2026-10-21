@@ -22,7 +22,7 @@ let registration
 globalThis.window = { __ModuleLoader__: { load: (row) => { registration = row } } }
 
 /** Elements `createElement` builds, enough to inspect what a component returns. */
-const element = (type, props, children) => ({ type, props: { ...props, children } })
+const element = (type, props, ...children) => ({ type, props: { ...props, children } })
 
 /** The only module a factory may require without a browser module table. */
 const react = {
@@ -185,6 +185,27 @@ check('menu opens the directory page', tabs.length === 1
 check('menu hidden off a file address', menuRow.component({
   tab: { id: 'tab-2', contentId: 'sidebar://guide' }, dismiss: () => {}, t: say,
 }) === null)
+
+// The preview toolbar's parent button: that seat asks for one, and it opens
+// the directory page at the file's own directory.
+const previewRow = registrations.find(row => row.options.name === 'sidebar.right.tab.document.actions')
+const renderToolbar = (row, absolutePath) => {
+  const fieldElement = row.component({ absolutePath, sessionId: 's1', t: say })
+  const toolbar = fieldElement.type(fieldElement.props)
+  return toolbar.props.children[1].props.children[0]
+}
+const upButton = renderToolbar(previewRow, '/repo/src/deep/file.ts')
+check('parent button rendered', upButton?.props?.['data-preview-path-parent'] === '', String(upButton?.type))
+tabs.length = 0
+upButton.props.onClick()
+check('parent opens the directory page', tabs.length === 1
+  && tabs[0].kind === 'preview-path-directory'
+  && tabs[0].options.params.path === '/repo/src/deep', JSON.stringify(tabs))
+check('parent disabled at a filesystem root', renderToolbar(previewRow, '/file.ts').props.disabled === true)
+
+const filesRow = registrations.find(row => row.options.name === 'sidebar.right.tab.files.actions')
+const filesButton = renderToolbar(filesRow, '/repo')
+check('no parent button on the file tree', filesButton?.props?.['data-preview-path-parent'] === undefined)
 
 check('dictionaries registered', Object.keys(dictionaries.previewPath ?? {}).length === 2)
 const zhKeys = Object.keys(dictionaries.previewPath?.zh ?? {}).sort()

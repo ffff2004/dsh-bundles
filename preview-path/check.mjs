@@ -47,7 +47,7 @@ check('service injection', Array.isArray(plugin.inject)
     .every(key => plugin.inject.includes(key)), String(plugin.inject))
 
 const {
-  fileAddress, pathOfAddress, joinPath, parentOf, sortEntries, statFailure, listFailure,
+  fileAddress, pathOfAddress, joinPath, parentOf, parentTarget, sortEntries, statFailure, listFailure,
 } = plugin.__test
 const say = (key) => key
 
@@ -88,6 +88,15 @@ check('parent', parentOf('/a/b/c') === '/a/b', parentOf('/a/b/c'))
 check('parent of a trailing separator', parentOf('/a/b/') === '/a', parentOf('/a/b/'))
 check('no parent at root', parentOf('/a') === undefined, parentOf('/a'))
 check('no parent at a drive root', parentOf('C:/x') === undefined, parentOf('C:/x'))
+
+// The parent button stops at the workspace root, which only a listing reveals:
+// its `path` is relative to that root and empty for the root itself.
+check('parent of a listed directory', parentTarget('/ws/a/b', { path: 'a/b' }) === '/ws/a',
+  parentTarget('/ws/a/b', { path: 'a/b' }))
+check('workspace root has no parent', parentTarget('/ws', { path: '' }) === undefined,
+  parentTarget('/ws', { path: '' }))
+check('parent of an unlisted path', parentTarget('/ws/a', undefined) === '/ws', parentTarget('/ws/a', undefined))
+check('no parent for an empty path', parentTarget('', undefined) === undefined)
 
 const sorted = sortEntries([
   { name: 'b', type: 'file' },

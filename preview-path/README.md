@@ -85,5 +85,12 @@ a page that was already open did not pick it up until reloaded. Later edits to
 - No completion, history, or validation while typing: one Host `stat` runs on
   Enter only. The directory page lists one level at a time, workspace-scoped, and
   shows the endpoint's entry cap when a listing is truncated.
+- The directory page's parent button stops at the workspace root: a listing
+  reports the listed directory relative to that root (empty for the root), so
+  the page learns the floor from the listing it just received. A path whose
+  listing failed keeps its syntactic parent, so it stays a way back from an
+  outside or missing path. The preview toolbar's parent button has no listing to
+  learn from, so previewing a file outside the workspace opens a parent the
+  listing then refuses, with the path left editable.
 - Replacing a tab drops its previous content from the sidebar history; reopen it
   from the conversation, the file tree, or the tab menu's directory page.

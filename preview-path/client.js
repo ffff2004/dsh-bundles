@@ -423,6 +423,25 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * The directory the parent button opens.
+     *
+     * Listings are workspace-scoped, so the workspace root is a floor: the
+     * endpoint reports the listed directory relative to that root (`''` for
+     * the root itself), which is the only place this page can learn where the
+     * floor is. A path whose listing failed keeps its syntactic parent, so the
+     * button still offers a way back from an outside or missing path.
+     *
+     * @param path - the path the page is on.
+     * @param listed - the listing for exactly that path, when one arrived.
+     * @returns the parent path, or `undefined` when there is nothing above it.
+     */
+    function parentTarget(path, listed) {
+      if (path === undefined || path === '') return undefined
+      if (listed !== undefined && listed.path === '') return undefined
+      return parentOf(path)
+    }
+
+    /**
      * Order one listing for reading: directories first, then names.
      * @param entries - the listing's entries.
      * @returns a new array, sorted.
@@ -739,14 +758,16 @@ window.__ModuleLoader__.load({
         React.useEffect(() => {
           if (path === undefined) return undefined
           const scope = new AbortController()
-          setState({ kind: 'loading' })
+          setState({ for: path, kind: 'loading' })
           list(path, scope.signal).then(
             (result) => {
               if (scope.signal.aborted) return
-              setState(result.ok ? { kind: 'ready', value: result.value } : { kind: 'failed', failure: result.error })
+              setState(result.ok
+                ? { for: path, kind: 'ready', value: result.value }
+                : { for: path, kind: 'failed', failure: result.error })
             },
             () => {
-              if (!scope.signal.aborted) setState({ kind: 'failed', failure: undefined })
+              if (!scope.signal.aborted) setState({ for: path, kind: 'failed', failure: undefined })
             },
           )
           return () => { scope.abort() }
@@ -755,7 +776,10 @@ window.__ModuleLoader__.load({
         React.useEffect(() => tab.actions.bindCommands({ refresh: () => { setNonce(value => value + 1) } }), [tab.actions])
 
         const reload = () => { setNonce(value => value + 1) }
-        const parent = path === undefined ? undefined : parentOf(path)
+        // A state left over from another path is stale: the effect below is
+        // about to replace it, so the page reads as loading until it does.
+        const current = state.for === path ? state : undefined
+        const parent = parentTarget(path, current?.kind === 'ready' ? current.value : undefined)
         const openFile = (target) => { tab.actions.openResource(fileAddress(sessionId, target)) }
 
         const row = (entry) => {
@@ -775,16 +799,18 @@ window.__ModuleLoader__.load({
         }
 
         const content = () => {
-          if (state.kind === 'loading') return h('p', { className: 'dsh-dir-note' }, t('loading'))
-          if (state.kind === 'failed') {
-            return h('p', { className: 'dsh-dir-note', 'data-error': '' }, listFailure(state.failure, t))
+          if (current === undefined || current.kind === 'loading') {
+            return h('p', { className: 'dsh-dir-note' }, t('loading'))
           }
-          const entries = sortEntries(state.value.entries)
+          if (current.kind === 'failed') {
+            return h('p', { className: 'dsh-dir-note', 'data-error': '' }, listFailure(current.failure, t))
+          }
+          const entries = sortEntries(current.value.entries)
           return [
             entries.length === 0
               ? h('p', { key: 'empty', className: 'dsh-dir-note' }, t('emptyDir'))
               : h('ul', { key: 'list', className: 'dsh-dir-list' }, entries.map(row)),
-            state.value.truncated
+            current.value.truncated
               ? h('p', { key: 'cut', className: 'dsh-dir-note' }, t('truncated'))
               : null,
           ]
@@ -1011,7 +1037,7 @@ window.__ModuleLoader__.load({
         }, OpenAsDirectory)), 'preview-path: tab menu')
       },
       // Pure helpers reached by `check.mjs` only; the loader ignores extra fields.
-      __test: { fileAddress, pathOfAddress, joinPath, parentOf, sortEntries, statFailure, listFailure },
+      __test: { fileAddress, pathOfAddress, joinPath, parentOf, parentTarget, sortEntries, statFailure, listFailure },
     }
   },
 })

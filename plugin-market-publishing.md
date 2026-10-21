@@ -1,9 +1,9 @@
 # 插件市场自动发布
 
-[工作流](<.github/workflows/plugin-market.yml>) 使用 DSH 官方 reference generator，自动生成索引及图标并分发到 GitHub Pages；不需要自建后端，也不向 Git 提交生成结果。
+[CI 工作流](<.github/workflows/ci.yml>) 使用 DSH 官方 reference generator，自动生成索引及图标并分发到 GitHub Pages；不需要自建后端，也不向 Git 提交生成结果。
 CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 URL，在 runner 临时目录生成输入清单，
 由生成器从远端默认分支发现各 bundle 子目录。无需在仓库中维护静态清单，临时清单也不会进入 Pages artifact。
-同一工作流的 `test` job 在 PR、tag 和手动运行时先安装 workspace 依赖并执行 `pnpm -r test`；部署要求 `build` 与 `test` 都通过。
+同一工作流的 `test` job 在 PR、tag 和手动运行时先安装 workspace 依赖并执行 `pnpm -r test`；部署要求 `market` 与 `test` 都通过。
 
 ## 首次启用
 

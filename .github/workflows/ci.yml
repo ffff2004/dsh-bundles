@@ -7,7 +7,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Keep publishing credentials out of the build job and pull requests.
+# Keep publishing credentials out of the market job and pull requests.
 permissions:
   contents: read
 
@@ -48,7 +48,7 @@ jobs:
       - name: Run bundle tests
         run: pnpm -r test
 
-  build:
+  market:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -134,7 +134,7 @@ jobs:
 
   deploy:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
-    needs: [build, test]
+    needs: [market, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

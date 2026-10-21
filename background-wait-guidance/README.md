@@ -34,14 +34,17 @@
 
 ## 安装
 
-通过 Plugin Manager 安装本目录。安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准；替换已安装包可能需要重启 DSH。支持 DSH `0.2.1-rc.2`。
+通过 Plugin Manager 安装本目录。安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准；替换已安装包可能需要重启 DSH。版本约束由 `engines.dsh` 声明为 DSH 0.2.1 系列。
 
 ## 验证
 
 ```bash
-pnpm install --ignore-scripts --config.auto-install-peers=false
-pnpm test
+# 在仓库根目录
+pnpm install
+pnpm --filter @local/dsh-background-wait-guidance test
 ```
+
+也可以直接运行 `pnpm -r test` 执行全部 bundle 的测试。
 
 测试使用开发依赖中的真实 Cordis 和 systemPrompt 服务，验证两个插件独立启停、恢复、可选服务挂载与卸载、注册清理、按 agent scope 的工具可见性；同时验证指令仅渲染到 system prompt、关闭可选运行时上下文后仍然存在，以及 complete system prompt 的替换行为。不调用模型 API。
 

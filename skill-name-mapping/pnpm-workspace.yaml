@@ -1,4 +1,0 @@
-# This linked Host bundle only needs its own runtime libraries.
-autoInstallPeers: false
-verifyDepsBeforeRun: false
-ignoreScripts: true

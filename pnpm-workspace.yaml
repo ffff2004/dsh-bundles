@@ -1,0 +1,13 @@
+# Every top-level directory is an independently installable bundle.
+# Keep this glob covering all of them: the plugin-market generator reads it
+# instead of falling back to its own directory scan.
+packages:
+  - "*"
+
+# Bundles stay self-contained packages; this workspace only shares one install
+# and one lockfile for local development and tests.
+autoInstallPeers: true
+# pnpm >=11 re-checks the install before running scripts and refuses ignored
+# native build scripts. No bundle test needs them.
+verifyDepsBeforeRun: false
+ignoreScripts: true

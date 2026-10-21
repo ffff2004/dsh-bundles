@@ -47,10 +47,11 @@ v1 的 `mappings`、`originalName`、别名 `name` 配置已移除；升级时 b
 ## 开发与安装
 
 ```sh
-pnpm install --ignore-scripts --config.auto-install-peers=false
-node --test index.test.js
+# 在仓库根目录
+pnpm install
+pnpm --filter @local/dsh-skill-name-mapping test
 node --check index.js
 node --check discovery.js
 ```
 
-使用 Harness `plugin_manager` 安装本目录；更新已安装包时先 remove 再 install，以结果和 live Config 验证新代码已应用。版本约束为 DSH `0.2.1-rc.2`，无 install/build scripts，图标为本插件原创 SVG。
+使用 Harness `plugin_manager` 安装本目录；更新已安装包时先 remove 再 install，以结果和 live Config 验证新代码已应用。版本约束由 `engines.dsh` 声明为 DSH 0.2.1 系列，无 install/build scripts，图标为本插件原创 SVG。

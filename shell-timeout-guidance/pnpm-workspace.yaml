@@ -1,4 +1,0 @@
-# The Harness runtime is installed only for standalone tests; the plugin itself imports nothing.
-autoInstallPeers: true
-ignoreScripts: true
-verifyDepsBeforeRun: false

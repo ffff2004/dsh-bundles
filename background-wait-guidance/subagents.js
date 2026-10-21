@@ -2,7 +2,7 @@
 export const name = 'background-wait-subagents'
 export const inject = ['systemPrompt', 'tools']
 
-const guidance = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be notified when a subagent finishes or sends a message. A waiting update is not a completion report.'
+const guidance = 'When no independent work remains and you are waiting for subagents, tell the user which subagents you are waiting for, then yield the turn — you will be resumed when a subagent finishes or sends a message. A waiting update is not a completion report.'
 
 export function apply(ctx) {
   ctx.inject(['subagents'], (subagentCtx) => {

@@ -2,7 +2,7 @@
 export const name = 'background-wait-jobs'
 export const inject = ['systemPrompt', 'tools']
 
-const guidance = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be notified when a job finishes. A waiting update is not a completion report.'
+const guidance = 'When no independent work remains and you are waiting for background jobs, tell the user which jobs you are waiting for, then yield the turn — you will be resumed when a job finishes. A waiting update is not a completion report.'
 
 export function apply(ctx) {
   ctx.inject(['jobs'], (jobCtx) => {

@@ -1,7 +1,8 @@
 /**
  * Self-check for the browser half: loads `client.js` the way the Web page does
  * (a module-loader registration, then a factory call), then asserts the plugin
- * surface, the address grammar, the failure copy, and the slot registration.
+ * surface, the address grammar, the path helpers, the failure copy, the tab
+ * type, the tab-menu item's behaviour, and every slot registration.
  *
  * The editor's rendering needs the live page; this check covers everything that
  * can be exercised without a DOM.
@@ -20,9 +21,12 @@ const check = (label, condition, detail) => {
 let registration
 globalThis.window = { __ModuleLoader__: { load: (row) => { registration = row } } }
 
+/** Elements `createElement` builds, enough to inspect what a component returns. */
+const element = (type, props, children) => ({ type, props: { ...props, children } })
+
 /** The only module a factory may require without a browser module table. */
 const react = {
-  createElement: () => null,
+  createElement: element,
   Fragment: Symbol('Fragment'),
   useState: () => [undefined, () => {}],
   useEffect: () => {},
@@ -39,12 +43,13 @@ const plugin = registration.factory((specifier) => {
 })
 
 check('service injection', Array.isArray(plugin.inject)
-  && plugin.inject.includes('slots')
-  && plugin.inject.includes('locale')
-  && plugin.inject.includes('sidebarRight')
-  && plugin.inject.includes('remote.workspaceFiles'), String(plugin.inject))
+  && ['slots', 'locale', 'sidebarRight', 'sidebarRightTabs', 'remote', 'remote.workspaceFiles']
+    .every(key => plugin.inject.includes(key)), String(plugin.inject))
 
-const { fileAddress, failureMessage } = plugin.__test
+const {
+  fileAddress, pathOfAddress, joinPath, parentOf, sortEntries, statFailure, listFailure,
+} = plugin.__test
+const say = (key) => key
 
 // Address grammar: one case per rule the copied encoder must keep in step with
 // `@deepseek-ai/dsh-util-workspace-path`'s `sessionFileAddress`.
@@ -63,18 +68,50 @@ check('non-ascii is encoded', fileAddress('s', '报告.md')
 check('session id is encoded', fileAddress('s 1', 'a')
   === 'dsh-resource://file/session/s%201/a', fileAddress('s 1', 'a'))
 
-const say = (key) => key
-check('missing file copy', failureMessage({ code: 'workspace-file/not-found' }, say) === 'notFound')
-check('directory copy', failureMessage({ code: 'workspace-file/not-regular-file' }, say) === 'notFile')
-check('other copy', failureMessage({ code: 'gateway/bad-request' }, say) === 'failed')
-check('no failure', failureMessage(undefined, say) === 'failed')
+// The reverse read the tab menu item runs over a tab's content id.
+check('path of a session address', pathOfAddress('dsh-resource://file/session/s1/src/a%20b.md') === 'src/a b.md',
+  pathOfAddress('dsh-resource://file/session/s1/src/a%20b.md'))
+check('path of an absolute address', pathOfAddress('dsh-resource://file/absolute/home/u/x.txt') === '/home/u/x.txt',
+  pathOfAddress('dsh-resource://file/absolute/home/u/x.txt'))
+check('path of a drive address', pathOfAddress('dsh-resource://file/absolute/C:/x/y.txt') === 'C:/x/y.txt',
+  pathOfAddress('dsh-resource://file/absolute/C:/x/y.txt'))
+check('path round trip', pathOfAddress(fileAddress('s', 'C:\\notes\\a b.md')) === 'C:/notes/a b.md',
+  pathOfAddress(fileAddress('s', 'C:\\notes\\a b.md')))
+check('address without a path', pathOfAddress('dsh-resource://file/session/s1') === undefined)
+check('foreign address', pathOfAddress('sidebar://guide') === undefined)
+check('malformed escape', pathOfAddress('dsh-resource://file/session/s1/%E0%A4%A') === undefined)
 
-/** Slot registrations and dictionaries the plugin body produced. */
+check('join', joinPath('/a/b', 'c') === '/a/b/c', joinPath('/a/b', 'c'))
+check('join with trailing separator', joinPath('/a/b/', 'c') === '/a/b/c', joinPath('/a/b/', 'c'))
+check('join at root', joinPath('', 'c') === 'c', joinPath('', 'c'))
+check('parent', parentOf('/a/b/c') === '/a/b', parentOf('/a/b/c'))
+check('parent of a trailing separator', parentOf('/a/b/') === '/a', parentOf('/a/b/'))
+check('no parent at root', parentOf('/a') === undefined, parentOf('/a'))
+check('no parent at a drive root', parentOf('C:/x') === undefined, parentOf('C:/x'))
+
+const sorted = sortEntries([
+  { name: 'b', type: 'file' },
+  { name: 'a', type: 'directory' },
+  { name: 'file10', type: 'file' },
+  { name: 'file2', type: 'file' },
+])
+check('listing order', sorted.map(entry => entry.name).join(',') === 'a,b,file2,file10', sorted.map(entry => entry.name).join(','))
+
+check('missing stat copy', statFailure({ code: 'workspace-file/not-found' }, say) === 'notFound')
+check('other stat copy', statFailure({ code: 'gateway/bad-request' }, say) === 'failed')
+check('missing listing copy', listFailure({ code: 'workspace-file/not-found' }, say) === 'notFound')
+check('not a directory copy', listFailure({ code: 'workspace-file/not-directory' }, say) === 'notDirectory')
+check('outside workspace copy', listFailure({ code: 'workspace-file/outside-workspace' }, say) === 'outsideWorkspace')
+check('other listing copy', listFailure(undefined, say) === 'failed')
+
+/** Slot registrations, tab types, and dictionaries the plugin body produced. */
 const registrations = []
+const types = []
 const dictionaries = {}
+const tabs = []
 const ctx = {
   effect: (callback) => callback(),
-  locale: { register: (ns, dicts) => { dictionaries[ns] = dicts; return () => {} } },
+  locale: { register: (ns, dicts) => { dictionaries[ns] = dicts; return () => {} }, bind: () => say },
   slots: {
     inject: (_name, callback) => callback(),
     register: (options, component) => {
@@ -82,27 +119,80 @@ const ctx = {
       return () => {}
     },
   },
-  sidebarRight: {},
-  remote: { workspaceFiles: { stat: async () => ({ ok: true, value: {} }) } },
+  sidebarRightTabs: { register: (definition) => { types.push(definition); return () => {} } },
+  sidebarRight: { openTab: (kind, options) => { tabs.push({ kind, options }) } },
+  remote: {
+    workspaceFiles: {
+      stat: async () => ({ ok: true, value: {} }),
+      list: async () => ({ ok: true, value: { path: '', entries: [], truncated: false } }),
+    },
+  },
 }
 
 plugin.apply(ctx)
 
-const [slot] = registrations
-check('one slot registration', registrations.length === 1, String(registrations.length))
-check('toolbar seat', slot?.options.name === 'sidebar.right.tab.document.actions', slot?.options.name)
-check('own cell id', slot?.options.id === 'preview-path', slot?.options.id)
-check('order before download', slot?.options.order === 10, String(slot?.options.order))
-check('copy follows the active locale', slot?.options.locale === 'previewPath', slot?.options.locale)
-check('component registered', typeof slot?.component === 'function')
+check('one tab type', types.length === 1, String(types.length))
+const type = types[0]
+check('directory kind', type?.kind === 'preview-path-directory', type?.kind)
+check('page claims no address', type?.patterns === undefined, String(type?.patterns))
+check('tab title thunk', type?.title('sidebar://x') === 'tab.title', type?.title('sidebar://x'))
+check('guide entry', type?.guide?.length === 1 && type.guide[0].title() === 'guide.title')
 
+const names = registrations.map(row => row.options.name).sort().join(',')
+check('five seats', registrations.length === 5, names)
+check('seats', names === [
+  'sidebar.right.pane.tab',
+  'sidebar.right.pane.tab.title',
+  'sidebar.right.tab.document.actions',
+  'sidebar.right.tab.files.actions',
+  'sidebar.right.tab.menu.item',
+].sort().join(','), names)
+
+const toolbar = registrations.filter(row => row.options.name === 'sidebar.right.tab.document.actions'
+  || row.options.name === 'sidebar.right.tab.files.actions')
+check('two pencil cells', toolbar.length === 2, String(toolbar.length))
+check('own cell id', toolbar.every(row => row.options.id === 'preview-path'))
+check('order before download', toolbar.every(row => row.options.order === 10))
+const needingCopy = registrations.filter(row => row.options.name !== 'sidebar.right.pane.tab.title')
+check('copy follows the active locale', needingCopy.every(row => row.options.locale === 'previewPath'),
+  needingCopy.map(row => `${row.options.name}:${row.options.locale}`).join(','))
+
+const body = registrations.find(row => row.options.name === 'sidebar.right.pane.tab')
+check('body keyed by the type id', body?.options.key === '@local/dsh-preview-path/directory', body?.options.key)
+check('body component', typeof body?.component === 'function')
+const injected = body.options.inject('session-1')
+check('body lists through the Remote', typeof injected.list === 'function')
+await injected.list('src', undefined).then((result) => {
+  check('listing result rides through', result.ok === true)
+})
+
+const menuRow = registrations.find(row => row.options.name === 'sidebar.right.tab.menu.item')
+let dismissed = false
+const node = menuRow.component({
+  tab: { id: 'tab-1', contentId: 'dsh-resource://file/session/s1/src/a%20b.md' },
+  dismiss: () => { dismissed = true },
+  t: say,
+})
+check('menu item renders a button', node?.type === 'button', node?.type)
+check('menu item marks itself', node?.props['data-preview-path-open-directory'] === '')
+check('menu item is a menu item', node?.props.role === 'menuitem')
+node.props.onClick()
+check('menu dismisses itself', dismissed)
+check('menu opens the directory page', tabs.length === 1
+  && tabs[0].kind === 'preview-path-directory'
+  && tabs[0].options.params.path === 'src/a b.md'
+  && tabs[0].options.replaceTab === 'tab-1', JSON.stringify(tabs))
+check('menu hidden off a file address', menuRow.component({
+  tab: { id: 'tab-2', contentId: 'sidebar://guide' }, dismiss: () => {}, t: say,
+}) === null)
+
+check('dictionaries registered', Object.keys(dictionaries.previewPath ?? {}).length === 2)
 const zhKeys = Object.keys(dictionaries.previewPath?.zh ?? {}).sort()
 const enKeys = Object.keys(dictionaries.previewPath?.en ?? {}).sort()
-check('dictionaries registered', zhKeys.length > 0 && enKeys.length === zhKeys.length)
 check('dictionary keys match', JSON.stringify(zhKeys) === JSON.stringify(enKeys), enKeys.join(','))
 
-// The source must stay a plain script the Web page can evaluate: no import
-// statements, and the registration is the first statement.
+// The source must stay a plain script the Web page can evaluate: no import or
+// export statements, and the registration goes through the module loader.
 const source = await readFile(new URL('./client.js', import.meta.url), 'utf8')
 check('plain script', !/^\s*(?:import|export)\s/m.test(source))
 check('registers through the module loader', /window\.__ModuleLoader__\.load\(\{/.test(source))
@@ -111,5 +201,5 @@ if (failures.length > 0) {
   console.error(`preview-path check failed:\n- ${failures.join('\n- ')}`)
   process.exitCode = 1
 } else {
-  console.log(`preview-path check passed (${registrations.length} seat, ${zhKeys.length} strings)`)
+  console.log(`preview-path check passed (${registrations.length} seats, ${types.length} type, ${zhKeys.length} strings)`)
 }

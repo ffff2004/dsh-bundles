@@ -15,9 +15,11 @@
 | [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`；超时终止时不添加，不修改默认超时或工具参数。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
 
+具体配置、版本兼容性及重启要求以各 bundle 的 README 为准。
+
 ## 使用
 
-通过 Harness Plugin Manager 将对应子目录安装为 bundle。具体配置、版本兼容性及重启要求以各 bundle 的 README 为准。
+DSH Agent 可通过 Harness Plugin Manager 工具将对应子目录安装为 bundle，人工安装方法如下：
 
 ### 从插件市场安装（推荐）
 
@@ -55,23 +57,7 @@ dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HE
 
 ## 本地开发
 
-仓库使用一个 pnpm workspace 共享安装和锁文件；每个 bundle 仍是可独立安装的包，`package.json` 中的声明才是发布后真正生效的内容。
-
-```bash
-pnpm install    # 安装所有 bundle 的依赖，含仅测试使用的 devDependencies
-pnpm -r test    # 运行全部 bundle 的测试
-```
-
-只跑一个 bundle：`pnpm --filter @local/dsh-shell-description test`。
-
-依赖声明约定（与 DSH 对 out-of-tree 插件的要求一致）：
-
-- 需要与宿主共享实例的 `@deepseek-ai/*` 包 → `peerDependencies` + `devDependencies`（同一版本）；
-- 仅测试使用的运行时包 → 只放 `devDependencies`；
-- 第三方库与无状态工具包 → `dependencies`；
-- 兼容范围统一由 `engines.dsh` 声明，不再用 `@deepseek-ai/dsh` peer 表达。
-
-新增或移动 bundle 目录时同步更新 `pnpm-workspace.yaml` 的 `packages`。插件市场生成器会优先按这些 glob 发现 bundle，glob 漏掉的目录不会回退到目录扫描。
+见 [AGENTS.md](AGENTS.md)。
 
 ## 发布维护
 

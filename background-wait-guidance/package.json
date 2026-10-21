@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-background-wait-guidance",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "type": "module",
   "description": "Independent jobs and subagent guidance plugins for yielding to background completion notifications.",

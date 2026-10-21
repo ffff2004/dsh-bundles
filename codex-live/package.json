@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-codex-live",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Registers a codex-live provider whose model catalog follows the local codex CLI state.",
@@ -16,9 +16,8 @@
       "patch": "./cordis.patch.yml"
     }
   },
-  "peerDependencies": {
-    "@deepseek-ai/dsh": "0.2.1-rc.2"
-  },
+  "engines": { "dsh": "0.2.1-rc.2" },
+  "scripts": { "test": "node --test" },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5",
     "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",

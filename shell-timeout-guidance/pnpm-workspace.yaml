@@ -1,2 +1,4 @@
-# The Harness peer is provided by the profile, not needed for standalone tests.
-autoInstallPeers: false
+# The Harness runtime is installed only for standalone tests; the plugin itself imports nothing.
+autoInstallPeers: true
+ignoreScripts: true
+verifyDepsBeforeRun: false

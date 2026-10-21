@@ -1,9 +1,10 @@
 {
   "name": "@local/dsh-shell-timeout-guidance",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "description": "Encourages models to omit unnecessary bash and pwsh timeoutMs overrides.",
+  "engines": { "dsh": ">=0.2.1-rc.2 <0.2.2-0" },
   "exports": {
     ".": "./index.js",
     "./locale/*.json": "./locale/*.json",
@@ -11,6 +12,11 @@
   },
   "files": ["index.js", "cordis.patch.yml", "README.md", "locale/*.json", "icon.svg"],
   "scripts": { "test": "node --test" },
-  "peerDependencies": { "@deepseek-ai/dsh": "0.2.1-rc.2" },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2"
+  },
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
 }

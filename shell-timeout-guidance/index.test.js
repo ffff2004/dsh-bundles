@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { realpathSync } from 'node:fs'
-import { createRequire } from 'node:module'
-import { pathToFileURL } from 'node:url'
 import test from 'node:test'
+import { Context } from '@deepseek-ai/cordis'
+import { createScope } from '@deepseek-ai/dsh-scope'
+import SystemPrompt, { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
+import Tools, { defineTool } from '@deepseek-ai/dsh-tools'
 import * as plugin from './index.js'
 
 const approved = [
@@ -76,16 +77,7 @@ for (const name of ['bash', 'pwsh']) {
   })
 }
 
-// Both directories must point to installed packages from the same DSH version.
-test('real scoped registry: bash/pwsh isolation, drift, restriction, shadowing and disposal', {
-  skip: !process.env.DSH_SYSTEM_PROMPT_DIR || !process.env.DSH_TOOLS_DIR,
-}, async () => {
-  const require = createRequire(realpathSync(`${process.env.DSH_TOOLS_DIR}/package.json`))
-  const load = spec => import(pathToFileURL(require.resolve(spec)))
-  const { Context } = await load('@deepseek-ai/cordis')
-  const { createScope } = await load('@deepseek-ai/dsh-scope')
-  const { default: Tools, defineTool } = await load('@deepseek-ai/dsh-tools')
-  const { default: SystemPrompt, renderPrompt } = await import(pathToFileURL(`${process.env.DSH_SYSTEM_PROMPT_DIR}/lib/index.js`))
+test('real scoped registry: bash/pwsh isolation, drift, restriction, shadowing and disposal', async () => {
   const ctx = new Context()
   const makeShell = (name, description = approved[0]) => defineTool({
     name, description: 'Scoped test shell',

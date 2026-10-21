@@ -32,7 +32,7 @@
 
 ## 验证
 
-运行 `pnpm test`（或 `node --test`）执行基础测试。同时设置 `DSH_SYSTEM_PROMPT_DIR` 和 `DSH_TOOLS_DIR`，分别指向同一 DSH 版本已安装的 `@deepseek-ai/dsh-system-prompt`、`@deepseek-ai/dsh-tools` 包目录，可执行真实 Cordis 工具 registry 集成测试；未设置时该项跳过。
+运行 `pnpm install`（安装仅用于测试的 devDependencies）后执行 `pnpm test`（或 `node --test`）。真实 Cordis 工具 registry 集成测试默认加载本目录 devDependencies 中的 DSH `0.2.1-rc.2` 运行时，不再需要指向本机安装路径的环境变量，也不会在缺少环境变量时跳过。
 
 测试覆盖 bash-only、pwsh-only、两者同时可见、两者均缺失、描述漂移、工具动态注册、多 agent 隔离、scoped 覆盖、工具限制、插件卸载及工具 schema 不变。集成测试不启动 PowerShell 进程。
 

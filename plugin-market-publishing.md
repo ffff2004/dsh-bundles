@@ -15,6 +15,7 @@ CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 U
 
 自动发布仅由 `<完整包名>@<version>` 格式的 tag 推送触发，例如 `@local/dsh-shell-timeout-guidance@1.2.0`。
 工作流先匹配含 `@` 的 tag，再确认生成索引确实收录了对应包、版本及该 tag 的 commit；不匹配则失败，不部署。
+一次 push 超过三个 tag 时 GitHub 不产生 push 事件，工作流不会运行；批量发布应逐个推送，或每次最多三个。
 普通 `main` 推送不触发工作流；仍可手动运行，并仅允许在 `main` 或 tag 上部署。
 Pull request 只生成和校验 artifact，不部署。
 

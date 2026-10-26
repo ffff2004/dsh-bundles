@@ -101,8 +101,10 @@ const configSchemas = new Map([
 const prunerName = '@deepseek-ai/dsh-compaction-tool-result-pruner'
 
 // Rows whose config carries a Loader expression cannot be resolved without
-// evaluating it. The expected skip set is pinned: a new expression row must be
-// reviewed and added here rather than silently escaping validation.
+// evaluating it. The expected set is pinned: a new expression row must be
+// reviewed and added here rather than escaping validation. Entries are full row
+// labels (preset plus nested group path), so nested rows cannot collide with a
+// same-id row elsewhere.
 const loaderExpressionRows = new Set(['lean-cordis/skill-filesystem'])
 
 function hasLoaderExpression(value) {
@@ -119,29 +121,94 @@ function rowsWithConfig(rows, label, collected = []) {
   return collected
 }
 
+// `Schema.resolve(..., strict = true)` drops undeclared keys instead of
+// throwing, so the resolved value must be compared with the source: objects by
+// key, arrays by index. Every returned path names a key that vanished during
+// resolution, i.e. a config field the upstream schema does not declare.
+function droppedPaths(source, resolved, path = '') {
+  if (Array.isArray(source)) {
+    if (!Array.isArray(resolved)) return [path || '<root>']
+    return source.flatMap((item, index) => droppedPaths(item, resolved[index], `${path}[${index}]`))
+  }
+  if (source === null || typeof source !== 'object') return []
+  if (resolved === null || typeof resolved !== 'object') return [path || '<root>']
+  const prefix = path === '' ? '' : `${path}.`
+  const keys = Object.keys(source)
+  const dropped = keys.filter(key => !Object.hasOwn(resolved, key)).map(key => `${prefix}${key}`)
+  const nested = keys
+    .filter(key => Object.hasOwn(resolved, key))
+    .flatMap(key => droppedPaths(source[key], resolved[key], `${prefix}${key}`))
+  return [...dropped, ...nested]
+}
+
+// `Schema.resolve` forwards `strict` only to the top level: nested object
+// properties are resolved without it, so an undeclared key inside a declared
+// object is merged back instead of dropped and stays invisible to the
+// source/resolved comparison above. `dict` is schemastery's internal map of
+// declared keys; walk it to name undeclared nested keys as well.
+function undeclaredConfigPaths(value, schema, path = '') {
+  if (Array.isArray(value)) {
+    if (schema?.inner === undefined) return []
+    return value.flatMap((item, index) => undeclaredConfigPaths(item, schema.inner, `${path}[${index}]`))
+  }
+  if (value === null || typeof value !== 'object' || schema?.dict === undefined) return []
+  const prefix = path === '' ? '' : `${path}.`
+  return Object.keys(value).flatMap((key) => {
+    const keyPath = `${prefix}${key}`
+    if (!Object.hasOwn(schema.dict, key)) return [keyPath]
+    const declared = schema.dict[key]
+    if (declared.type === 'object' || declared.type === 'array') {
+      return undeclaredConfigPaths(value[key], declared, keyPath)
+    }
+    return []
+  })
+}
+
 test('every mounted preset config row is accepted by its upstream schema', () => {
+  // A schema that stopped declaring keys (for example a passthrough `any()`)
+  // would accept everything and silently disable this guard; probe each one.
+  // A schema with a required key rejects the bare probe, which already proves
+  // it validates, so only a successful resolve needs the extra check.
+  for (const [name, schema] of configSchemas) {
+    try {
+      const [probe] = Schema.resolve({ __probeUndeclared: 1 }, schema, {}, true)
+      assert.equal(Object.hasOwn(probe, '__probeUndeclared'), false,
+        `${name} Config no longer restricts undeclared keys, so this validator cannot catch stale config`)
+    } catch (error) {
+      if (error?.name !== 'ValidationError') throw error
+    }
+  }
+
   const skipped = new Set()
   for (const presetId of ['lean', 'lean-cordis', 'lean-ptc']) {
     for (const { row, label } of rowsWithConfig(preset(presetId).config.plugins, presetId)) {
       const where = `${label} (${row.name})`
+      const schema = configSchemas.get(row.name)
       if (hasLoaderExpression(row.config)) {
-        skipped.add(`${presetId}/${row.id}`)
+        skipped.add(label)
+        // The expression value cannot be evaluated, but its key must still be
+        // declared. `dict` is schemastery's internal map of declared keys; a
+        // schema without it cannot be checked this way.
+        assert.ok(schema?.dict !== undefined,
+          `${where} carries a Loader expression but its Config exposes no \`dict\` to check key names; validate it another way`)
+        const unknown = Object.keys(row.config).filter(key => !Object.hasOwn(schema.dict, key))
+        assert.deepEqual(unknown, [],
+          `${where} config has keys its upstream schema does not declare: ${unknown.join(', ')}`)
         continue
       }
       if (row.name === prunerName) {
         assert.doesNotThrow(() => resolvePrunerConfig(row.config), `${where} config is rejected by its resolver`)
         continue
       }
-      const schema = configSchemas.get(row.name)
       assert.ok(schema !== undefined,
         `${where} carries config but this test has no upstream schema for it: newly added config rows need a validator`)
       const [resolved] = Schema.resolve(row.config, schema, {}, true)
-      const undeclared = Object.keys(row.config).filter(key => !(key in resolved))
-      assert.deepEqual(
-        undeclared,
-        [],
-        `${where} config has keys its upstream schema does not declare: ${undeclared.join(', ')}`,
-      )
+      const undeclared = [...new Set([
+        ...droppedPaths(row.config, resolved),
+        ...undeclaredConfigPaths(row.config, schema),
+      ])]
+      assert.deepEqual(undeclared, [],
+        `${where} config has keys its upstream schema does not declare: ${undeclared.join(', ')}`)
     }
   }
   assert.deepEqual([...skipped].sort(), [...loaderExpressionRows].sort(),

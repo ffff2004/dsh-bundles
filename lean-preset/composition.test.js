@@ -146,6 +146,8 @@ function droppedPaths(source, resolved, path = '') {
 // object is merged back instead of dropped and stays invisible to the
 // source/resolved comparison above. `dict` is schemastery's internal map of
 // declared keys; walk it to name undeclared nested keys as well.
+const descendableSchemaTypes = new Set(['object', 'array'])
+
 function undeclaredConfigPaths(value, schema, path = '') {
   if (Array.isArray(value)) {
     if (schema?.inner === undefined) return []
@@ -157,19 +159,30 @@ function undeclaredConfigPaths(value, schema, path = '') {
     const keyPath = `${prefix}${key}`
     if (!Object.hasOwn(schema.dict, key)) return [keyPath]
     const declared = schema.dict[key]
-    if (declared.type === 'object' || declared.type === 'array') {
-      return undeclaredConfigPaths(value[key], declared, keyPath)
+    const child = value[key]
+    // Primitive leaves are fully covered by the schema resolution above; only a
+    // composite value needs a schema walk, and only if this adapter supports it.
+    if (child === null || typeof child !== 'object') return []
+    if (!descendableSchemaTypes.has(declared.type)) {
+      throw new Error(
+        `${keyPath} holds a composite value but its schema type "${declared.type}" is not handled by this adapter; `
+        + 'extend undeclaredConfigPaths before storing nested config under it',
+      )
     }
-    return []
+    return undeclaredConfigPaths(child, declared, keyPath)
   })
 }
 
 test('every mounted preset config row is accepted by its upstream schema', () => {
-  // A schema that stopped declaring keys (for example a passthrough `any()`)
-  // would accept everything and silently disable this guard; probe each one.
-  // A schema with a required key rejects the bare probe, which already proves
-  // it validates, so only a successful resolve needs the extra check.
+  // Two self-checks guard this test's premise, split by what they can cover:
+  // - the per-schema probe below covers every known schema even when no row
+  //   mounts it, but a required key can make the bare probe throw before it
+  //   proves anything;
+  // - the row-level sentinel reuses each real config, so it always resolves and
+  //   proves the schema still drops an extra key for the row being validated.
   for (const [name, schema] of configSchemas) {
+    assert.notEqual(schema.dict, undefined,
+      `${name} Config no longer exposes schemastery's internal \`dict\`; the nested key check would silently stop working`)
     try {
       const [probe] = Schema.resolve({ __probeUndeclared: 1 }, schema, {}, true)
       assert.equal(Object.hasOwn(probe, '__probeUndeclared'), false,
@@ -178,6 +191,13 @@ test('every mounted preset config row is accepted by its upstream schema', () =>
       if (error?.name !== 'ValidationError') throw error
     }
   }
+
+  // Direct evidence that the nested adapter itself rejects an undeclared key
+  // inside a declared object: schema resolution keeps such keys (see above).
+  assert.deepEqual(
+    undeclaredConfigPaths({ agentOptions: { notAKey: 1 } }, toolSubagentConfig),
+    ['agentOptions.notAKey'],
+  )
 
   const skipped = new Set()
   for (const presetId of ['lean', 'lean-cordis', 'lean-ptc']) {
@@ -202,6 +222,9 @@ test('every mounted preset config row is accepted by its upstream schema', () =>
       }
       assert.ok(schema !== undefined,
         `${where} carries config but this test has no upstream schema for it: newly added config rows need a validator`)
+      const [sentinel] = Schema.resolve({ ...row.config, __probeUndeclared: 1 }, schema, {}, true)
+      assert.equal(Object.hasOwn(sentinel, '__probeUndeclared'), false,
+        `${where} Config accepts undeclared keys, so this row's validator cannot catch stale config`)
       const [resolved] = Schema.resolve(row.config, schema, {}, true)
       const undeclared = [...new Set([
         ...droppedPaths(row.config, resolved),

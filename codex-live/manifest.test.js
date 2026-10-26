@@ -1,22 +1,48 @@
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
+import { builtinModules } from 'node:module'
 import test from 'node:test'
 
 // 只读文本，不加载宿主包：这样测试不依赖 @deepseek-ai/* 是否可解析。
 const read = (name) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8')
 
-// 静态 import/export（含裸副作用 import 与 export ... from）；
-// 动态 import()、import.meta 与 ctx.get('服务名') 不在覆盖范围。
-const STATIC_IMPORT = /^\s*(?:import|export)\b(?!\s*[.(])[^'"]*?(?:from\s*)?['"]([^'"]+)['"]/gm
+// 只匹配真实 import 语法：import/export ... from 'x' 与裸 import 'x'。
+// 不会命中 import('x')、import.meta、export const a = ['@x']。
+const FROM_IMPORT = /\bfrom\s*['"]([^'"]+)['"]/g
+const SIDE_EFFECT = /\bimport\s*['"]([^'"]+)['"]/g
 
-const dshImportsOf = (source) => {
-  const names = new Set()
-  for (const [, specifier] of source.matchAll(STATIC_IMPORT)) {
-    if (!specifier.startsWith('@deepseek-ai/')) continue
-    // 子路径 import（@scope/pkg/sub）仍然需要声明 @scope/pkg 本身。
-    names.add(specifier.split('/').slice(0, 2).join('/'))
+const importsOf = (source) => {
+  const specifiers = new Set()
+  for (const pattern of [FROM_IMPORT, SIDE_EFFECT]) {
+    for (const [, specifier] of source.matchAll(pattern)) specifiers.add(specifier)
   }
-  return names
+  return specifiers
+}
+
+const packageOf = (specifier) =>
+  specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0]
+
+const isExternal = (specifier) =>
+  !specifier.startsWith('.') &&
+  !specifier.startsWith('/') &&
+  !specifier.includes('://') &&
+  !specifier.startsWith('node:') &&
+  !builtinModules.includes(specifier)
+
+// 递归扫描 bundle 目录下所有非测试 JS 模块，新增模块（含子目录）不会漏检。
+const moduleFiles = readdirSync(new URL('.', import.meta.url), { recursive: true })
+  .filter((file) => file.endsWith('.js') && !file.endsWith('.test.js'))
+  .filter((file) => !file.split('/').includes('node_modules'))
+  .sort()
+
+const importedBy = new Map()
+for (const file of moduleFiles) {
+  for (const specifier of importsOf(read(file))) {
+    if (!isExternal(specifier)) continue
+    const name = packageOf(specifier)
+    if (!importedBy.has(name)) importedBy.set(name, new Set())
+    importedBy.get(name).add(file)
+  }
 }
 
 const manifest = JSON.parse(read('package.json'))
@@ -25,57 +51,70 @@ const devVersions = manifest.devDependencies ?? {}
 const peers = new Set(Object.keys(peerVersions))
 const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
 
-// 扫描 bundle 根下所有非测试模块，新增文件不会漏检。
-const moduleFiles = readdirSync(new URL('.', import.meta.url))
-  .filter((name) => name.endsWith('.js') && !name.endsWith('.test.js'))
-  .sort()
-const importsByFile = new Map(moduleFiles.map((file) => [file, dshImportsOf(read(file))]))
-const importers = (name) =>
-  [...importsByFile].filter(([, names]) => names.has(name)).map(([file]) => file)
-const imported = new Set([...importsByFile.values()].flatMap((names) => [...names]))
+const imported = [...importedBy.keys()].sort()
+const importers = (name) => [...(importedBy.get(name) ?? [])].sort()
+const locationOf = (name) =>
+  peers.has(name) ? 'peerDependencies' : dependencies.has(name) ? 'dependencies' : 'undeclared'
+const dshImports = imported.filter((name) => name.startsWith('@deepseek-ai/dsh-'))
+const utilImports = imported.filter(
+  (name) => name.startsWith('@deepseek-ai/') && !name.startsWith('@deepseek-ai/dsh-'),
+)
+const thirdPartyImports = imported.filter((name) => !name.startsWith('@deepseek-ai/'))
 
 test('scans every non-test runtime module', () => {
+  assert.notEqual(moduleFiles.length, 0)
   assert.ok(moduleFiles.includes('index.js'), `scanned files: ${moduleFiles.join(', ')}`)
-  assert.ok(moduleFiles.includes('prompt-cache.js'), `scanned files: ${moduleFiles.join(', ')}`)
   assert.equal(moduleFiles.some((file) => file.endsWith('.test.js')), false)
 })
 
-test('collects bare and re-exported imports', () => {
+test('collects imports without false positives', () => {
   const source = [
     "import { a } from '@deepseek-ai/dsh-llm'",
     "import '@deepseek-ai/dsh-session'",
     "export { b } from '@deepseek-ai/dsh-session/sub'",
     "import z from '@deepseek-ai/schemastery'",
+    "import { c } from '@earendil-works/pi-ai/providers/all'",
+    "export const PEERS = ['@deepseek-ai/dsh-timeout']",
     "import('@deepseek-ai/dsh-scope')",
     "import { x } from 'node:fs'",
+    "import { y } from './local.js'",
   ].join('\n')
-  assert.deepEqual(
-    [...dshImportsOf(source)].sort(),
-    ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/schemastery'],
-  )
+  const packages = [...new Set([...importsOf(source)].filter(isExternal).map(packageOf))].sort()
+  assert.deepEqual(packages, [
+    '@deepseek-ai/dsh-llm',
+    '@deepseek-ai/dsh-session',
+    '@deepseek-ai/schemastery',
+    '@earendil-works/pi-ai',
+  ])
 })
 
 test('every imported dsh package is declared as a peer', () => {
   // dsh-* 包必须与宿主共享实例（自带副本会破坏 LlmError 的 instanceof），因此只能在 peers。
-  const misplaced = [...imported]
-    .sort()
-    .filter((name) => name.startsWith('@deepseek-ai/dsh-') && !peers.has(name))
-    .map((name) => `${importers(name).join(', ')} imports ${name} (${dependencies.has(name) ? 'dependencies' : 'undeclared'})`)
-  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be peerDependencies: ${misplaced.join(', ')}`)
+  const misplaced = dshImports
+    .filter((name) => !peers.has(name))
+    .map((name) => `${importers(name).join(', ')} imports ${name} (${locationOf(name)})`)
+  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be peerDependencies: ${misplaced.join('; ')}`)
 })
 
-test('imported non-dsh packages come from dependencies', () => {
+test('every imported @deepseek-ai utility package is a dependency', () => {
   // 无状态工具包（schemastery）按 AGENTS.md 只能放 dependencies，不能当 peer。
-  const misplaced = [...imported]
-    .sort()
-    .filter((name) => !name.startsWith('@deepseek-ai/dsh-') && !dependencies.has(name))
-    .map((name) => `${importers(name).join(', ')} imports ${name} (${peers.has(name) ? 'peerDependencies' : 'undeclared'})`)
-  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be dependencies: ${misplaced.join(', ')}`)
+  const misplaced = utilImports
+    .filter((name) => !dependencies.has(name))
+    .map((name) => `${importers(name).join(', ')} imports ${name} (${locationOf(name)})`)
+  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be dependencies: ${misplaced.join('; ')}`)
+})
+
+test('every imported third-party package is a dependency', () => {
+  // 第三方库（@earendil-works/pi-ai）同样属于 dependencies。
+  const misplaced = thirdPartyImports
+    .filter((name) => !dependencies.has(name))
+    .map((name) => `${importers(name).join(', ')} imports ${name} (${locationOf(name)})`)
+  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be dependencies: ${misplaced.join('; ')}`)
 })
 
 test('peerDependencies lists only imported packages', () => {
   // @deepseek-ai/cordis 是唯一的豁免：宿主运行时，插件只通过 ctx 使用，从不直接 import。
-  const unused = [...peers].filter((name) => name !== '@deepseek-ai/cordis' && !imported.has(name)).sort()
+  const unused = [...peers].filter((name) => name !== '@deepseek-ai/cordis' && !importedBy.has(name)).sort()
   assert.deepEqual(unused, [], `peerDependencies entries that no runtime module imports: ${unused.join(', ')}`)
 })
 

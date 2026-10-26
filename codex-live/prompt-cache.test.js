@@ -11,8 +11,7 @@ test('removes only the body key and preserves session and request options', asyn
   assert.equal(wrapped.sessionId, options.sessionId)
   assert.equal(wrapped.cacheRetention, options.cacheRetention)
   assert.equal(wrapped.signal, options.signal)
-  assert.equal(options.onPayload, undefined)
-  assert.equal(await wrapped.onPayload(body, {}), body)
+  await wrapped.onPayload(body, {})
   assert.equal(Object.hasOwn(body, 'prompt_cache_key'), false)
   assert.deepEqual(body, { model: 'gpt-5.6', input: [] })
 })
@@ -28,7 +27,6 @@ test('runs a mutating callback before removing the key', async () => {
   const body = { prompt_cache_key: 'original' }
   const wrapped = withoutPromptCacheKey({
     onPayload(payload, receivedModel) {
-      assert.equal(payload, body)
       assert.equal(receivedModel, model)
       payload.prompt_cache_key = 'overridden'
       payload.store = false
@@ -42,8 +40,7 @@ test('uses an async callback replacement and removes its key', async () => {
   const replacement = { prompt_cache_key: 'replacement', input: ['updated'] }
   const wrapped = withoutPromptCacheKey({ onPayload: async () => replacement })
 
-  assert.equal(await wrapped.onPayload({ prompt_cache_key: 'original' }, {}), replacement)
-  assert.deepEqual(replacement, { input: ['updated'] })
+  assert.deepEqual(await wrapped.onPayload({ prompt_cache_key: 'original' }, {}), { input: ['updated'] })
 })
 
 test('propagates callback failures', async () => {

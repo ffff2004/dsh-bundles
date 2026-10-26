@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+
+import { Config as agentInstructionsConfig } from '@deepseek-ai/dsh-agent-instructions'
+import { Config as presentationConfig } from '@deepseek-ai/dsh-agent-tool-presentation'
+import { resolveConfig as resolvePrunerConfig } from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+import { Config as personaConfig } from '@deepseek-ai/dsh-persona'
+import { Config as skillFilesystemConfig } from '@deepseek-ai/dsh-skill-filesystem'
+import { Config as toolSubagentConfig } from '@deepseek-ai/dsh-tool-subagent'
+import { Config as toolWebConfig } from '@deepseek-ai/dsh-tool-web'
+import Schema from '@deepseek-ai/schemastery'
 import { parseDocument } from 'yaml'
 
 import { apply } from './tool-order.js'
@@ -72,4 +81,69 @@ test('PTC keeps compaction providers and consumers in the same isolated group', 
 test('package export ./tool-order resolves to the implemented plugin', async () => {
   const plugin = await import('@local/dsh-lean-preset/tool-order')
   assert.equal(plugin.apply, apply)
+})
+
+// Upstream schema contracts for the config rows these presets mount. Each
+// `Config` export is a schemastery schema: resolving a row config with
+// `strict = true` drops every key the schema does not declare, so a key that
+// survives in the row but is missing from the resolved object is a config field
+// the upstream package no longer supports.
+const configSchemas = new Map([
+  ['@deepseek-ai/dsh-agent-instructions', agentInstructionsConfig],
+  ['@deepseek-ai/dsh-agent-tool-presentation', presentationConfig],
+  ['@deepseek-ai/dsh-persona', personaConfig],
+  ['@deepseek-ai/dsh-skill-filesystem', skillFilesystemConfig],
+  ['@deepseek-ai/dsh-tool-subagent', toolSubagentConfig],
+  ['@deepseek-ai/dsh-tool-web', toolWebConfig],
+])
+
+// The pruner exports no schemastery schema; its own resolver throws on unknown keys.
+const prunerName = '@deepseek-ai/dsh-compaction-tool-result-pruner'
+
+// Rows whose config carries a Loader expression cannot be resolved without
+// evaluating it. The expected skip set is pinned: a new expression row must be
+// reviewed and added here rather than silently escaping validation.
+const loaderExpressionRows = new Set(['lean-cordis/skill-filesystem'])
+
+function hasLoaderExpression(value) {
+  if (Array.isArray(value)) return value.some(hasLoaderExpression)
+  if (value === null || typeof value !== 'object') return false
+  return Object.entries(value).some(([key, inner]) => key === '__jsExpr' || hasLoaderExpression(inner))
+}
+
+function rowsWithConfig(rows, label, collected = []) {
+  for (const row of rows) {
+    if (row.group === true) rowsWithConfig(row.config, `${label}/${row.id}`, collected)
+    else if (row.config !== undefined) collected.push({ row, label: `${label}/${row.id}` })
+  }
+  return collected
+}
+
+test('every mounted preset config row is accepted by its upstream schema', () => {
+  const skipped = new Set()
+  for (const presetId of ['lean', 'lean-cordis', 'lean-ptc']) {
+    for (const { row, label } of rowsWithConfig(preset(presetId).config.plugins, presetId)) {
+      const where = `${label} (${row.name})`
+      if (hasLoaderExpression(row.config)) {
+        skipped.add(`${presetId}/${row.id}`)
+        continue
+      }
+      if (row.name === prunerName) {
+        assert.doesNotThrow(() => resolvePrunerConfig(row.config), `${where} config is rejected by its resolver`)
+        continue
+      }
+      const schema = configSchemas.get(row.name)
+      assert.ok(schema !== undefined,
+        `${where} carries config but this test has no upstream schema for it: newly added config rows need a validator`)
+      const [resolved] = Schema.resolve(row.config, schema, {}, true)
+      const undeclared = Object.keys(row.config).filter(key => !(key in resolved))
+      assert.deepEqual(
+        undeclared,
+        [],
+        `${where} config has keys its upstream schema does not declare: ${undeclared.join(', ')}`,
+      )
+    }
+  }
+  assert.deepEqual([...skipped].sort(), [...loaderExpressionRows].sort(),
+    'a preset row gained a Loader expression: decide explicitly whether it can be validated')
 })

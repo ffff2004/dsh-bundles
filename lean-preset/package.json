@@ -17,6 +17,16 @@
   },
   "files": ["cordis.patch.yml", "tool-order.js", "locale/*.json", "tool-order-locale/*.json", "icon.svg", "README.md"],
   "scripts": { "test": "node --test" },
-  "devDependencies": { "yaml": "^2.8.1" },
+  "devDependencies": {
+    "@deepseek-ai/dsh-agent-instructions": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-agent-tool-presentation": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-compaction-tool-result-pruner": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-persona": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-skill-filesystem": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-tool-subagent": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-tool-web": "0.2.1-rc.3",
+    "@deepseek-ai/schemastery": "3.18.5",
+    "yaml": "^2.8.1"
+  },
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
 }

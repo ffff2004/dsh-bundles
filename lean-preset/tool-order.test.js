@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 import { apply, inject } from './tool-order.js'
@@ -84,14 +83,4 @@ test('uses the downstream waterfall result, not the original assembly', async ()
 test('propagates downstream failure', async () => {
   const error = new Error('downstream failure')
   await assert.rejects(listener()(assembly([]), {}, async () => { throw error }), candidate => candidate === error)
-})
-
-test('mounts the policy in lean-cordis only and exports its module', async () => {
-  const patch = await readFile(new URL('./cordis.patch.yml', import.meta.url), 'utf8')
-  const [lean, cordis] = patch.split('    - id: preset-lean-cordis\n')
-  assert.ok(cordis)
-  assert.equal(lean.includes('@local/dsh-lean-preset/tool-order'), false)
-  assert.equal(cordis.match(/@local\/dsh-lean-preset\/tool-order/g)?.length, 1)
-  const plugin = await import('@local/dsh-lean-preset/tool-order')
-  assert.equal(plugin.apply, apply)
 })

@@ -131,7 +131,9 @@ function hidden(ctx, scope, name = 'bash', expected = toolBashSchema) {
   // The model must never be told to fill a parameter the schema no longer has.
   // A failure here means upstream reworded the hint, so the plugin's literal
   // replace missed it: the parameter stays hidden but the instruction leaks.
-  assert.doesNotMatch(schema.description, /`description`/)
+  // Matching the bare word is deliberate: the tool descriptions use "description"
+  // only in that hint, so any occurrence means the hint may still be there.
+  assert.doesNotMatch(schema.description, /description/i)
   return schema
 }
 

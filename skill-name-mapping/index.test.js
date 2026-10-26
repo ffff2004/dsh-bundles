@@ -130,7 +130,7 @@ test('parseMappedSkill: required fields, YAML shapes and ASCII-only alias safety
 })
 
 test('parseMappedSkill: arbitrary YAML tags rejected and aliases bounded', () => {
-  assert.throws(() => parse(document('metadata: !untrusted arbitrary\n')), /Unresolved tag/)
+  assert.throws(() => parse(document('metadata: !untrusted arbitrary\n')), /unresolved tag/i)
   assert.equal(parse(document('whenToUse: &hint Query the library\nmetadata:\n  hint: *hint\n')).metadata.hint, 'Query the library')
   const explosive = 'metadata:\n  a: &a [x, x, x, x, x, x, x, x, x, x]\n  b: &b [*a, *a, *a, *a, *a, *a, *a, *a, *a, *a]\n  c: [*b, *b, *b, *b, *b, *b, *b, *b, *b, *b]\n'
   assert.throws(() => parse(document(explosive)), /alias count/i)

@@ -33,7 +33,7 @@ manager.
 | `cordis.patch.yml` | Inserts the one plugin row |
 | `index.js` | Host half: the authenticated download route |
 | `client.js` | Browser half: the toolbar control |
-| `check.mjs` | Self-check for the host route against a temporary file (`node check.mjs`) |
+| `check.mjs` | Self-check for the host route and its route-path agreement with the browser half (`node check.mjs`) |
 
 ## Install and remove
 
@@ -48,7 +48,7 @@ undo, `remove_bundle @local/dsh-preview-download` and restart the profile.
   `/api` route.
 - The browser half cannot import the host half, so the route path is written in
   both `index.js` (`ROUTE_PATH`) and `client.js` (`ROUTE_URL`); changing one
-  requires changing the other.
+  requires changing the other. `check.mjs` now enforces that agreement.
 - A failed gesture reports only on the control (error color, tooltip, and a
   polite status announcement); a richer toast would require copying the
   host `Toast` primitive, which persistent plugins must not load as a module.

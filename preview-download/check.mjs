@@ -27,7 +27,7 @@ const check = (label, condition, detail) => {
 }
 
 const client = await readFile(new URL('./client.js', import.meta.url), 'utf8')
-const clientRoute = client.match(/const ROUTE_URL = '([^']+)'/)?.[1]
+const clientRoute = client.match(/const ROUTE_URL = ['"`]([^'"`]+)['"`]/)?.[1]
 
 const dir = await mkdtemp(join(tmpdir(), 'preview-download-'))
 let route
@@ -91,7 +91,6 @@ try {
   ))
 
   check('route path', route.path === EXPECTED_ROUTE, route.path)
-  check('route path is under /api', route.path.startsWith('/api/'), route.path)
   check('client route agrees', clientRoute === EXPECTED_ROUTE.slice(1), clientRoute)
   check('route methods', route.methods.join(',') === 'GET,HEAD', route.methods.join(','))
 
@@ -101,8 +100,7 @@ try {
   check('HEAD type', head.headers.get('content-type') === 'application/octet-stream')
   check('HEAD cache', head.headers.get('cache-control') === 'no-store')
   const disposition = head.headers.get('content-disposition') ?? ''
-  check('HEAD disposition ascii', disposition === `${EXPECTED_ASCII}; ${EXPECTED_UTF8}`, disposition)
-  check('HEAD disposition utf8', disposition.endsWith(EXPECTED_UTF8), disposition)
+  check('HEAD disposition', disposition === `${EXPECTED_ASCII}; ${EXPECTED_UTF8}`, disposition)
   check('HEAD body', (await head.text()) === '')
 
   windows = 0

@@ -132,6 +132,8 @@ function hidden(ctx, scope, name = 'bash', expected = toolBashSchema) {
   return schema
 }
 
+const hiddenThirdParty = (ctx, scope, name = 'bash') => hidden(ctx, scope, name, thirdPartySchema)
+
 function restored(tool, before) {
   assert.equal(tool.parameters, before.parameters, 'original parameters identity is restored')
   assert.deepEqual(tool.parameters, before.parameterValue, 'original parameter contents are restored')
@@ -223,11 +225,11 @@ test('global tool is hidden without any agents, including registration after act
   const first = synthetic()
   const unregister = h.ctx.tools.register(first)
   const adapter = await h.adapter()
-  hidden(h.ctx, undefined, 'bash', thirdPartySchema)
+  hiddenThirdParty(h.ctx)
   unregister()
   const replacement = synthetic()
   h.ctx.tools.register(replacement)
-  hidden(h.ctx, undefined, 'bash', thirdPartySchema)
+  hiddenThirdParty(h.ctx)
   assert.equal(await replacement.execute({ command: 'global command' }), 'global command')
   await adapter.dispose()
 })
@@ -277,7 +279,7 @@ test('pwsh-shaped one-shot definitions adapt execution and both presentation cal
   const before = snapshot(tool)
   h.ctx.tools.register(tool)
   const adapter = await h.adapter()
-  hidden(h.ctx, undefined, 'pwsh', thirdPartySchema)
+  hiddenThirdParty(h.ctx, undefined, 'pwsh')
   const args = { command: 'Write-Output test' }
   const result = { content: [{ type: 'text', text: 'test' }], isError: false }
   assert.equal(await tool.execute(args), 'Write-Output test')
@@ -324,7 +326,7 @@ test('unload does not overwrite another plugin subsequent field replacement', as
   const before = snapshot(tool)
   h.ctx.tools.register(tool)
   const adapter = await h.adapter()
-  hidden(h.ctx, undefined, 'bash', thirdPartySchema)
+  hiddenThirdParty(h.ctx)
   const subsequent = async () => 'another plugin implementation'
   const subsequentCall = () => ({ card: 'generic', title: 'another plugin call' })
   tool.execute = subsequent

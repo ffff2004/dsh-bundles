@@ -45,9 +45,9 @@ for (const names of [['bash'], ['bash', 'pwsh']]) {
 }
 
 test('mixed timeout modes: guides only bash', () => {
-  const backgroundName = 'bash'
-  const section = sectionFor(name => definition(approved[name === backgroundName ? 0 : 1]))
-  assert.equal(section.text({}), expected([backgroundName]))
+  // bash carries the background-on-timeout description, pwsh the kill-mode one.
+  const section = sectionFor(name => definition(approved[name === 'bash' ? 0 : 1]))
+  assert.equal(section.text({}), expected(['bash']))
 })
 
 test('rejects changed or missing descriptions for bash, even alongside an approved shell', () => {

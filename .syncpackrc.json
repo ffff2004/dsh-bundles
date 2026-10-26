@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/syncpack/schema.json",
+  "versionGroups": [
+    {
+      "label": "Root-only pinned tools do not constrain independently installed bundles",
+      "packages": ["dsh-bundles-tooling"],
+      "isIgnored": true
+    },
+    {
+      "label": "Host peers are compatibility ranges, separate from exact development versions",
+      "dependencyTypes": ["peer"]
+    },
+    {
+      "label": "Development and owned runtime dependencies stay consistent",
+      "dependencyTypes": ["dev", "prod"]
+    }
+  ]
+}

@@ -45,6 +45,12 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint bundle dependencies and compatibility declarations
+        run: pnpm lint
+
+      - name: Test dependency checker against CLI fixtures
+        run: pnpm test:lint
+
       - name: Run bundle tests
         run: pnpm -r test
 

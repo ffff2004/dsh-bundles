@@ -1,6 +1,6 @@
 # 隐藏 Shell 描述参数
 
-Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 的一次性 `bash` / `pwsh`。
+Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 与 rc.3 的一次性 `bash` / `pwsh`。
 
 ## 行为
 
@@ -17,7 +17,7 @@ Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 的一次性 `bash` / `pwsh
 
 新建 lean / cordis 会话，检查实际工具 schema：无 `description` 参数，无要求填写它的句子；不传该参数的 shell 调用仍成功。现有模型历史可能仍含旧参数说明，不重写历史记录。
 
-运行 `pnpm install`（安装仅用于测试的 devDependencies）后执行 `pnpm test`。真实 runtime 测试从本目录的 devDependencies 加载 DSH 0.2.1-rc.2，不依赖开发机已安装的 DSH；要验证其它 DSH 版本，把 `DSH_RUNTIME_NODE_MODULES` 指向该安装的 node_modules。测试仅模拟底层 shell，不执行命令。
+运行 `pnpm install`（安装仅用于测试的 devDependencies）后执行 `pnpm test`。真实 runtime 测试从本目录的 devDependencies 加载 DSH 0.2.1-rc.3，不依赖开发机已安装的 DSH；要验证其它 DSH 版本，把 `DSH_RUNTIME_NODE_MODULES` 指向该安装的 node_modules。测试仅模拟底层 shell，不执行命令。
 
 本次安装器返回 `restart-required` / `unmanaged-plugin`：当前会话的 schema 隐藏及不传 description 的真实调用已验证成功，但完整迁移（尤其旧 preset revision 的退出）仍应在方便时重启 DSH 后确认。安装过程未重启服务。中英文显示资源和原创 SVG 已校验，Plugin Manager 中的实际渲染尚未做浏览器验收。
 

@@ -21,7 +21,7 @@
 
 ## 装配时的上游描述检查
 
-激活时只注册动态提示 section，不查询全局工具。每次 prompt assembly 时，用 `ctx.tools.get(shellName, scope)` 分别查询该 agent 实际可见的 bash/pwsh，读取 `parameters.properties.timeoutMs.description`（编译后的 JSON Schema），与人工确认的两份完整快照严格比较（超时转后台／超时终止）。已核对 DSH 0.2.1-rc.2 的 bash 和 pwsh 使用相同描述。
+激活时只注册动态提示 section，不查询全局工具。每次 prompt assembly 时，用 `ctx.tools.get(shellName, scope)` 分别查询该 agent 实际可见的 bash/pwsh，读取 `parameters.properties.timeoutMs.description`（编译后的 JSON Schema），与人工确认的两份完整快照严格比较（超时转后台／超时终止）。已核对 DSH 0.2.1-rc.2 与 rc.3 的 bash 和 pwsh 使用相同描述。
 
 - Web 的 shell 工具由 agent preset 按 scope 注册；全局没有工具不影响启用。
 - 不可见的工具（尚未注册、被隐藏或已卸载）不添加指导、不报错；之后的装配会重新查询。
@@ -32,7 +32,7 @@
 
 ## 验证
 
-运行 `pnpm install`（安装仅用于测试的 devDependencies）后执行 `pnpm test`（或 `node --test`）。真实 Cordis 工具 registry 集成测试默认加载本目录 devDependencies 中的 DSH `0.2.1-rc.2` 运行时，不再需要指向本机安装路径的环境变量，也不会在缺少环境变量时跳过。
+运行 `pnpm install`（安装仅用于测试的 devDependencies）后执行 `pnpm test`（或 `node --test`）。真实 Cordis 工具 registry 集成测试默认加载本目录 devDependencies 中的 DSH `0.2.1-rc.3` 运行时，不再需要指向本机安装路径的环境变量，也不会在缺少环境变量时跳过。
 
 测试覆盖 bash-only、pwsh-only、两者同时可见、两者均缺失、描述漂移、工具动态注册、多 agent 隔离、scoped 覆盖、工具限制、插件卸载及工具 schema 不变。集成测试不启动 PowerShell 进程。
 

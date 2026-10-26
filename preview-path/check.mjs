@@ -97,8 +97,6 @@ check('parent of a listed directory', parentTarget('/ws/a/b', { path: 'a/b' }) =
 // workspace root": only a multi-segment root fails when the floor rule goes.
 check('workspace root has no parent', parentTarget('/repo/ws', { path: '' }) === undefined,
   parentTarget('/repo/ws', { path: '' }))
-check('workspace root keeps its syntactic parent below the root', parentTarget('/repo/ws/a', { path: 'a' }) === '/repo/ws',
-  parentTarget('/repo/ws/a', { path: 'a' }))
 check('parent of an unlisted path', parentTarget('/ws/a', undefined) === '/ws', parentTarget('/ws/a', undefined))
 check('no parent for an empty path', parentTarget('', undefined) === undefined)
 

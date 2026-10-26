@@ -150,8 +150,19 @@ const descendableSchemaTypes = new Set(['object', 'array'])
 
 function undeclaredConfigPaths(value, schema, path = '') {
   if (Array.isArray(value)) {
-    if (schema?.inner === undefined) return []
-    return value.flatMap((item, index) => undeclaredConfigPaths(item, schema.inner, `${path}[${index}]`))
+    return value.flatMap((item, index) => {
+      const itemPath = `${path}[${index}]`
+      // Primitive elements are fully covered by the schema resolution above;
+      // composite ones need the same declared-type check as object properties.
+      if (item === null || typeof item !== 'object') return []
+      if (schema?.inner === undefined || !descendableSchemaTypes.has(schema.inner.type)) {
+        throw new Error(
+          `${itemPath} holds a composite value but its schema type "${schema?.inner?.type ?? 'no inner schema'}" `
+          + 'is not handled by this adapter; extend undeclaredConfigPaths before storing nested config under it',
+        )
+      }
+      return undeclaredConfigPaths(item, schema.inner, itemPath)
+    })
   }
   if (value === null || typeof value !== 'object' || schema?.dict === undefined) return []
   const prefix = path === '' ? '' : `${path}.`

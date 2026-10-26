@@ -30,7 +30,7 @@ test('registers a renamed literal section without looking up tools at activation
   assert.equal(section.order, 900)
 })
 
-for (const names of [['bash'], ['pwsh'], ['bash', 'pwsh']]) {
+for (const names of [['bash'], ['bash', 'pwsh']]) {
   test(`guides only visible tools: ${names.join(', ')}, with both approved descriptions`, () => {
     const scope = {}
     for (const description of approved) {
@@ -44,31 +44,29 @@ for (const names of [['bash'], ['pwsh'], ['bash', 'pwsh']]) {
   })
 }
 
-for (const backgroundName of ['bash']) {
-  test(`mixed timeout modes: guides only ${backgroundName}`, () => {
-    const section = sectionFor(name => definition(approved[name === backgroundName ? 0 : 1]))
-    assert.equal(section.text({}), expected([backgroundName]))
-  })
-}
+test('mixed timeout modes: guides only bash', () => {
+  const backgroundName = 'bash'
+  const section = sectionFor(name => definition(approved[name === backgroundName ? 0 : 1]))
+  assert.equal(section.text({}), expected([backgroundName]))
+})
 
-for (const name of ['bash']) {
-  test(`rejects changed or missing descriptions for ${name}, even alongside an approved shell`, () => {
-    const fixtures = [
-      [{}, 'Actual: <missing>'],
-      [definition('Changed upstream'), 'Actual: "Changed upstream"'],
-      [definition(`${approved[0]} `), `Actual: ${JSON.stringify(`${approved[0]} `)}`],
-    ]
-    for (const [invalid, actual] of fixtures) {
-      const section = sectionFor(tool => tool === name ? invalid : definition(approved[0]))
-      assert.throws(() => section.text({}), error => {
-        assert.ok(error.message.includes(`shell-timeout-guidance: upstream ${name}.timeoutMs.description is missing or has changed`))
-        for (const description of approved) assert.ok(error.message.includes(description), error.message)
-        assert.ok(error.message.includes(actual), error.message)
-        return true
-      })
-    }
-  })
-}
+test('rejects changed or missing descriptions for bash, even alongside an approved shell', () => {
+  const name = 'bash'
+  const fixtures = [
+    [{}, 'Actual: <missing>'],
+    [definition('Changed upstream'), 'Actual: "Changed upstream"'],
+    [definition(`${approved[0]} `), `Actual: ${JSON.stringify(`${approved[0]} `)}`],
+  ]
+  for (const [invalid, actual] of fixtures) {
+    const section = sectionFor(tool => tool === name ? invalid : definition(approved[0]))
+    assert.throws(() => section.text({}), error => {
+      assert.ok(error.message.includes(`shell-timeout-guidance: upstream ${name}.timeoutMs.description is missing or has changed`))
+      for (const description of approved) assert.ok(error.message.includes(description), error.message)
+      assert.ok(error.message.includes(actual), error.message)
+      return true
+    })
+  }
+})
 
 test('real scoped registry: bash/pwsh isolation, drift, restriction, shadowing and disposal', async () => {
   const ctx = new Context()

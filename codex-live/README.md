@@ -63,5 +63,5 @@ pi-ai 原本将请求的 `sessionId` 用作 `prompt_cache_key`，相当于按会
 - **上下文窗口取 codex 的数字。** 例如 `gpt-6.1-sol` 用 373000×95% = 354350，而 pi-ai 1.3.0 的 catalog 写 272000。想保守就设 `useEffectiveContextPercent: false` 并按上游改 `contextWindow`。
 - **`ultra` 档不可达。** pi-ai 的 thinking level 只有 off/minimal/low/medium/high/xhigh/max，codex 的 `ultra` 没有对应档位，按上游做法 `max` → `max`。
 - **合成模型不显示 "off" 档。** pi-ai 的 codex 请求构造器在未指定 effort 时发送 `thinkingLevelMap.off ?? "none"`，而只接受 `low`..`max` 的模型（如 `gpt-6.1-sol`）会拒绝 `"none"`；因此 `off` 必须显式写成 `null`（不发 reasoning 块），代价是 DSH 的档位选择器把 null 视为不支持、隐藏该档。上游 catalog 对同一模型也是这么写的。
-- **绑定依赖版本。** `engines.dsh` 固定为 `0.2.1-rc.2`；dsh 升级后需要同步改版本并重新跑测试（`PiAiAdapter` 是按契约鸭子类型使用的，跨版本可能失配）。需要与宿主共享实例的 dsh 包声明在 `peerDependencies` + `devDependencies`，由 profile 的 `autoInstallPeers: false` 使用宿主副本；`@deepseek-ai/schemastery` 与 `@earendil-works/pi-ai` 保持 `dependencies`。
+- **绑定依赖版本。** `engines.dsh` 声明为 `>=0.2.1-rc.2 <0.2.2-0`，因此 rc.2 与 rc.3 都可加载；跨 minor 升级时仍需复核 `PiAiAdapter` 契约（它是按契约鸭子类型使用的，跨版本可能失配）。需要与宿主共享实例的 dsh 包声明在 `peerDependencies` + `devDependencies`，由 profile 的 `autoInstallPeers: false` 使用宿主副本；`@deepseek-ai/schemastery` 与 `@earendil-works/pi-ai` 保持 `dependencies`。
 - **错误码与宿主一致。** 插件不再自带 `@deepseek-ai/dsh-llm` 副本，`LlmError` 就是宿主使用的同一个类实例，`HarnessError` 判定正常；此前的 UNKNOWN 降级不再出现。

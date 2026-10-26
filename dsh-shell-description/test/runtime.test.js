@@ -128,7 +128,12 @@ function hidden(ctx, scope, name = 'bash', expected = toolBashSchema) {
   assert.equal(typeof schema.description, 'string', 'model schema keeps a description')
   assert.ok(schema.description.trim().length > 0, 'schema description is not empty')
   assert.match(schema.description, expected.description, `${name} schema description keeps its upstream text`)
-  assert.doesNotMatch(schema.description, /Provide `description` before `command`/)
+  // The model must never be told to fill a parameter the schema no longer has.
+  // A failure here means upstream reworded the hint, so the plugin's literal
+  // replace missed it: the parameter stays hidden but the instruction leaks.
+  // Matching the bare word is deliberate: the tool descriptions use "description"
+  // only in that hint, so any occurrence means the hint may still be there.
+  assert.doesNotMatch(schema.description, /description/i)
   return schema
 }
 

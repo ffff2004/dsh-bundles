@@ -59,7 +59,7 @@
 
 此排序只改变工具 schema 的顺序，不同步重排系统提示中的工具指导、Skills catalog 或其他消息；这些内容及服务端隐藏渲染也可能提前打断公共前缀。尚未通过真实请求验证缓存收益。DeepSeek 可比较多次预热后交替使用两个 preset 的 `usage.prompt_cache_hit_tokens` / (`prompt_cache_hit_tokens` + `prompt_cache_miss_tokens`)；OpenAI API 可比较 `usage.input_tokens_details.cached_tokens`、`cache_write_tokens` 和实际成本，并保持模型、设置及其余输入条件一致。
 
-在仓库根目录运行 `pnpm --filter @local/dsh-lean-preset test`，验证 YAML（含惰性 `!!js`）、PTC 与 lean 的基础配置一致性、隔离组、稳定排序、waterfall 兼容和挂载范围。
+在仓库根目录运行 `pnpm --filter @local/dsh-lean-preset test`，验证 YAML（含惰性 `!!js`）、PTC 与 lean 的基础配置一致性、隔离组、稳定排序、waterfall 兼容和挂载范围，以及每个带 `config` 的插件行都被对应上游包导出的 schemastery `Config` 接受（含嵌套键；含 Loader 表达式的行只校验键名，表达式值不求值；`dsh-compaction-tool-result-pruner` 用其 `resolveConfig`，未知键会抛错）。
 
 ## 使用
 

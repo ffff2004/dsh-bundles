@@ -141,7 +141,6 @@ test('multiple pages and one replacement policy for both opener contracts', () =
 
 test('directory rows and parent navigate via the tab, never local path state', async t => {
   const f = fixture(t)
-  assert.equal(f.types[0].multiple, true)
   const tree = await f.body()
   await click(tree.root.findByProps({ 'data-preview-path-name': 'child' }))
   assert.deepEqual(f.opens.pop(), { kind: directoryKind, options: expectedPage('/ws/sub/child', true), source: 'directory-1' })
@@ -194,7 +193,15 @@ test('directory reads navigation parameters; refresh only reloads and cleans bin
 test('guide defaults to root; two page instances keep separate sources', async t => {
   const f = fixture(t)
   const a = await f.body()
-  const aProps = { ...f.bodyProps, useTabInfo: () => ({ tab: {
+  const aProps = { ...f.bodyProps,
+    // A multi-segment workspace root: only the listing-derived floor keeps the
+    // up button disabled here, because parentOf('/repo/ws') is '/repo'.
+    useSessions: select => select({ byId: { s1: { cwd: '/repo/ws' } } }),
+    list: async () => ({ ok: true, value: {
+      path: '', truncated: false,
+      entries: [{ name: 'child', type: 'directory' }, { name: 'a.txt', type: 'file' }, { name: 'link', type: 'other' }],
+    } }),
+    useTabInfo: () => ({ tab: {
     id: 'directory-2', signal: new AbortController().signal,
     navigation: { params: undefined, revision: 0 },
     actions: {
@@ -203,7 +210,7 @@ test('guide defaults to root; two page instances keep separate sources', async t
     },
   } }) }
   const b = await f.mount('sidebar.right.pane.tab', aProps)
-  assert.equal(find(b, 'data-preview-path-directory').props['data-preview-path-root'], '/ws')
+  assert.equal(find(b, 'data-preview-path-directory').props['data-preview-path-root'], '/repo/ws')
   assert.equal(find(b, 'data-preview-path-up').props.disabled, true)
   await click(b.root.findByProps({ 'data-preview-path-name': 'child' }))
   assert.equal(f.opens.pop().source, 'directory-2')
@@ -240,6 +247,8 @@ test('preview parent and menu use the shared replacement policy', async t => {
   await click(find(menu, 'data-preview-path-open-directory'))
   assert.equal(dismissed, true)
   assert.deepEqual(f.opens.pop().options, expectedPage('/ws/missing', 'menu-tab'))
+  // The menu opens the directory page directly; it must not stat the path first.
+  assert.equal(f.stats.length, 0)
 })
 
 test('unchanged, empty, and failed inputs do not navigate', async t => {

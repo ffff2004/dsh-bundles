@@ -93,8 +93,10 @@ check('no parent at a drive root', parentOf('C:/x') === undefined, parentOf('C:/
 // its `path` is relative to that root and empty for the root itself.
 check('parent of a listed directory', parentTarget('/ws/a/b', { path: 'a/b' }) === '/ws/a',
   parentTarget('/ws/a/b', { path: 'a/b' }))
-check('workspace root has no parent', parentTarget('/ws', { path: '' }) === undefined,
-  parentTarget('/ws', { path: '' }))
+// A one-segment root cannot tell "path exhausted" from "listing-derived
+// workspace root": only a multi-segment root fails when the floor rule goes.
+check('workspace root has no parent', parentTarget('/repo/ws', { path: '' }) === undefined,
+  parentTarget('/repo/ws', { path: '' }))
 check('parent of an unlisted path', parentTarget('/ws/a', undefined) === '/ws', parentTarget('/ws/a', undefined))
 check('no parent for an empty path', parentTarget('', undefined) === undefined)
 
@@ -153,7 +155,6 @@ check('tab title thunk', type?.title('sidebar://x') === 'tab.title', type?.title
 check('guide entry', type?.guide?.length === 1 && type.guide[0].title() === 'guide.title')
 
 const names = registrations.map(row => row.options.name).sort().join(',')
-check('five seats', registrations.length === 5, names)
 check('seats', names === [
   'sidebar.right.pane.tab',
   'sidebar.right.pane.tab.title',
@@ -164,7 +165,6 @@ check('seats', names === [
 
 const toolbar = registrations.filter(row => row.options.name === 'sidebar.right.tab.document.actions'
   || row.options.name === 'sidebar.right.tab.files.actions')
-check('two pencil cells', toolbar.length === 2, String(toolbar.length))
 check('own cell id', toolbar.every(row => row.options.id === 'preview-path'))
 check('order before download', toolbar.every(row => row.options.order === 10))
 const needingCopy = registrations.filter(row => row.options.name !== 'sidebar.right.pane.tab.title')

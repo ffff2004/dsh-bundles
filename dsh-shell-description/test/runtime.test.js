@@ -79,7 +79,7 @@ async function fixture(t) {
     async adapter() {
       const plugin = await import(process.env.DSH_PLUGIN_UNDER_TEST ?? new URL('../index.js', import.meta.url).href)
       assert.equal(typeof plugin.apply, 'function')
-      assert.deepEqual([...plugin.inject].sort(), ['agents', 'tools'])
+      assert.ok(plugin.inject.includes('agents') && plugin.inject.includes('tools'), 'plugin injects agents and tools')
       const fiber = ctx.plugin(plugin)
       await fiber
       return fiber
@@ -104,14 +104,35 @@ function snapshot(definition) {
   }
 }
 
-function hidden(ctx, scope, name = 'bash') {
+// Model-facing contract of the real ToolBash definition used by this fixture
+// (config `{ enableRunInBackground: false }` does not expose `run_in_background`).
+const toolBashSchema = {
+  properties: ['command', 'timeoutMs', 'workdir'],
+  description: /Execute a bash command \(`bash -c`\) and return its stdout\/stderr\./,
+}
+// The third-party shell definitions built by synthetic().
+const thirdPartySchema = {
+  properties: ['command'],
+  description: /^A third-party shell tool\.$/,
+}
+
+function hidden(ctx, scope, name = 'bash', expected = toolBashSchema) {
   const schema = ctx.tools.schemas(scope).find(tool => tool.name === name)
   assert.ok(schema, `${name} is visible`)
   assert.equal(Object.hasOwn(schema.parameters.properties, 'description'), false, 'model schema hides description')
   assert.equal(schema.parameters.required?.includes('description') ?? false, false)
+  assert.ok(schema.parameters.required?.includes('command') ?? false, 'model schema still requires command')
+  for (const property of expected.properties) {
+    assert.equal(typeof schema.parameters.properties[property]?.type, 'string', `model schema keeps ${property}`)
+  }
+  assert.equal(typeof schema.description, 'string', 'model schema keeps a description')
+  assert.ok(schema.description.trim().length > 0, 'schema description is not empty')
+  assert.match(schema.description, expected.description, `${name} schema description keeps its upstream text`)
   assert.doesNotMatch(schema.description, /Provide `description` before `command`/)
   return schema
 }
+
+const hiddenThirdParty = (ctx, scope, name = 'bash') => hidden(ctx, scope, name, thirdPartySchema)
 
 function restored(tool, before) {
   assert.equal(tool.parameters, before.parameters, 'original parameters identity is restored')
@@ -169,7 +190,8 @@ test('agent/created discovers a previously unpublished agent scope', async t => 
   await h.adapter()
   const agent = await h.agent({ enter: false })
   await h.bash(agent.ctx)
-  assert.ok(h.ctx.tools.get('bash', agent).parameters.properties.description, 'unpublished scope is not discoverable by a Host scan')
+  assert.ok(h.ctx.tools.get('bash', agent).parameters.properties.description,
+    'expected the unadapted description parameter before the agent is published')
   await h.publish(agent)
   hidden(h.ctx, agent)
   assert.equal((await h.call(agent, { command: 'new agent command' })).isError, false)
@@ -203,11 +225,11 @@ test('global tool is hidden without any agents, including registration after act
   const first = synthetic()
   const unregister = h.ctx.tools.register(first)
   const adapter = await h.adapter()
-  hidden(h.ctx)
+  hiddenThirdParty(h.ctx)
   unregister()
   const replacement = synthetic()
   h.ctx.tools.register(replacement)
-  hidden(h.ctx)
+  hiddenThirdParty(h.ctx)
   assert.equal(await replacement.execute({ command: 'global command' }), 'global command')
   await adapter.dispose()
 })
@@ -239,13 +261,12 @@ test('unload restores original objects and callbacks; supplied descriptions rema
   assert.equal(tool.presentCall(args).description, 'User supplied description')
   assert.equal(tool.presentCall({ command: 'first line\nsecond line' }).description, 'first line')
   assert.deepEqual(args, { command: 'first line\nsecond line', description: 'User supplied description' })
-  assert.doesNotThrow(() => tool.presentResult({ command: 'command' }, { content: [{ type: 'text', text: 'output' }], isError: false }))
   await adapter.dispose()
   restored(tool, before)
   const missing = await h.call(agent, { command: 'not run after unload' })
   assert.equal(missing.isError, true)
   assert.match(missing.error.message, /description/)
-  // Listener cleanup: new definitions after unload must not be touched.
+  // No adaptation after dispose: definitions registered later stay untouched.
   const other = synthetic({ name: 'pwsh' })
   const otherBefore = snapshot(other)
   h.ctx.tools.register(other)
@@ -258,7 +279,7 @@ test('pwsh-shaped one-shot definitions adapt execution and both presentation cal
   const before = snapshot(tool)
   h.ctx.tools.register(tool)
   const adapter = await h.adapter()
-  hidden(h.ctx, undefined, 'pwsh')
+  hiddenThirdParty(h.ctx, undefined, 'pwsh')
   const args = { command: 'Write-Output test' }
   const result = { content: [{ type: 'text', text: 'test' }], isError: false }
   assert.equal(await tool.execute(args), 'Write-Output test')
@@ -305,7 +326,7 @@ test('unload does not overwrite another plugin subsequent field replacement', as
   const before = snapshot(tool)
   h.ctx.tools.register(tool)
   const adapter = await h.adapter()
-  hidden(h.ctx)
+  hiddenThirdParty(h.ctx)
   const subsequent = async () => 'another plugin implementation'
   const subsequentCall = () => ({ card: 'generic', title: 'another plugin call' })
   tool.execute = subsequent

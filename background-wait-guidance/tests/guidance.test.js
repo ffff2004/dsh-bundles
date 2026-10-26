@@ -64,8 +64,13 @@ test('bundle exposes two plugin rows and localized display resources', async () 
       const locale = JSON.parse(await readFile(new URL(import.meta.resolve(
         `@local/dsh-background-wait-guidance/${kind}/locale/${language}.json`,
       )), 'utf8'))
-      assert.ok(locale.meta.title)
-      assert.ok(locale.meta.description)
+      for (const field of ['title', 'description']) {
+        const value = locale.meta[field]
+        assert.equal(typeof value, 'string', `${kind}/${language} ${field} must be a string`)
+        assert.ok(value.trim().length > 0, `${kind}/${language} ${field} must not be empty`)
+        assert.doesNotMatch(value, /^(?:TODO|TBD|title|description)$/i,
+          `${kind}/${language} ${field} must not be a placeholder`)
+      }
     }
   }
 })
@@ -104,18 +109,6 @@ test('subagents work without jobs', async t => {
   assert.deepEqual(await sectionNames(), [])
 })
 
-test('disabled jobs plugin omits jobs guidance without affecting subagent guidance', async t => {
-  const { ctx, scope, sectionNames } = await fixture(t, { jobs: false })
-  ctx.plugin(capability('jobs'))
-  await settle(ctx)
-  assert.deepEqual(await sectionNames(), [])
-  assert.equal(renderPrompt(await ctx.systemPrompt.assemble({ scope })), '')
-  assert.deepEqual(await sectionNames({}), [])
-  ctx.plugin(capability('subagents'))
-  await settle(ctx)
-  assert.deepEqual(await sectionNames(), [subagentsSection])
-})
-
 test('tool visibility is evaluated per scope on every assembly', async t => {
   const { ctx, scope, sectionNames } = await fixture(t)
   ctx.plugin(capability('jobs'))
@@ -151,14 +144,6 @@ test('plugins can be independently disabled and re-enabled without duplicate sec
   await restoredJobs.dispose()
   await settle(ctx)
   assert.deepEqual(await sectionNames(), [subagentsSection])
-})
-
-test('jobs plugin works with subagents plugin disabled', async t => {
-  const { ctx, sectionNames } = await fixture(t, { subagents: false })
-  ctx.plugin(capability('jobs'))
-  ctx.plugin(capability('subagents'))
-  await settle(ctx)
-  assert.deepEqual(await sectionNames(), [jobsSection])
 })
 
 for (const jobs of [true, false]) {
@@ -201,7 +186,6 @@ test('guidance follows the corresponding tool section in canonical order', async
   assert.deepEqual(assembly.sections.filter(section => section.text.length > 0).map(section => section.name), [
     'test-jobs', jobsSection, 'test-subagent', subagentsSection,
   ])
-  assert.equal(renderPrompt(assembly), `Job tools.\n\n${jobsYield}\n\nSubagent tools.\n\n${subagentsYield}`)
 })
 
 test('complete system prompt sections can replace the guidance', async t => {

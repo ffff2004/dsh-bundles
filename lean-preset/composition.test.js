@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { parseDocument } from 'yaml'
 
+import { apply } from './tool-order.js'
+
 // Preserve Loader expressions as inert values: tests must not evaluate !!js.
 const document = parseDocument(await readFile(new URL('./cordis.patch.yml', import.meta.url), 'utf8'), {
   customTags: [{ tag: 'tag:yaml.org,2002:js', resolve: value => ({ __jsExpr: value }) }],
@@ -65,4 +67,9 @@ test('PTC keeps compaction providers and consumers in the same isolated group', 
   assert.equal(group.group, true)
   assert.deepEqual(group.isolate, { compaction: true, toolResultPruner: true })
   assert.deepEqual(group.config.map(row => row.id), ['compaction-basic', 'command-compact', 'tool-result-pruner'])
+})
+
+test('package export ./tool-order resolves to the implemented plugin', async () => {
+  const plugin = await import('@local/dsh-lean-preset/tool-order')
+  assert.equal(plugin.apply, apply)
 })

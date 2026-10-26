@@ -1,6 +1,6 @@
 # 隐藏 Shell 描述参数
 
-Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 的一次性 `bash` / `pwsh`。
+Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 与 rc.3 的一次性 `bash` / `pwsh`。
 
 ## 行为
 

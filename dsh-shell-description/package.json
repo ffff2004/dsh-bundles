@@ -1,10 +1,10 @@
 {
   "name": "@local/dsh-shell-description",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "description": "Hide the description argument of one-shot bash and pwsh tools across agent presets.",
-  "engines": { "dsh": ">=0.2.1-rc.2 <0.2.2-0" },
+  "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "exports": {
     ".": "./index.js",
     "./locale/*.json": "./locale/*.json",

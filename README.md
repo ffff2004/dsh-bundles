@@ -15,7 +15,7 @@
 | [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`；超时终止时不添加，不修改默认超时或工具参数。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
 
-具体配置、版本兼容性及重启要求以各 bundle 的 README 为准。
+具体配置及重启要求以各 bundle 的 README 为准；加载范围以各自 manifest 为准。当前 8 个 bundle 的 `engines.dsh` 为 `>=0.2.1-rc.2 <0.3.0-0`；放宽加载范围不代表已逐版验证全部 0.2.x。DSH peer 最低版本与 engines 分开保留，详情见[兼容与依赖策略](<dependency-policy.md>)。
 
 ## 使用
 
@@ -57,7 +57,7 @@ dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HE
 
 ## 本地开发
 
-见 [AGENTS.md](AGENTS.md)。
+安装与统一 gates 见 [AGENTS.md](<AGENTS.md>)；`pnpm lint` 是独立只读检查，`pnpm test:lint` 验证检查器正反例，`pnpm -r test` 保留各 bundle 行为测试。
 
 ## 发布维护
 

@@ -6,14 +6,15 @@ import test from 'node:test'
 // 只读文本，不加载宿主包：这样测试不依赖 @deepseek-ai/* 是否可解析。
 const read = (name) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8')
 
-// 只匹配真实 import 语法：import/export ... from 'x' 与裸 import 'x'。
-// 不会命中 import('x')、import.meta、export const a = ['@x']。
-const FROM_IMPORT = /\bfrom\s*['"]([^'"]+)['"]/g
-const SIDE_EFFECT = /\bimport\s*['"]([^'"]+)['"]/g
+// 行首锚定：console.log('from', 'x')、模板字符串里的 from、注释里的 import 都不算 import。
+// 中段用 [^'"]*? 而不是 [\s\S]*?：允许跨行 import，但不会越过字符串边界，
+// 否则裸 `import 'x'` 会被文件后面任意 `from 'y'` 吞掉。
+const IMPORT_STATEMENT = /^\s*import\s+(?:[^'"]*?\bfrom\s*)?['"]([^'"]+)['"]/gm
+const EXPORT_FROM = /^\s*export\s+[^'"]*?\bfrom\s*['"]([^'"]+)['"]/gm
 
 const importsOf = (source) => {
   const specifiers = new Set()
-  for (const pattern of [FROM_IMPORT, SIDE_EFFECT]) {
+  for (const pattern of [IMPORT_STATEMENT, EXPORT_FROM]) {
     for (const [, specifier] of source.matchAll(pattern)) specifiers.add(specifier)
   }
   return specifiers
@@ -32,7 +33,7 @@ const isExternal = (specifier) =>
 // 递归扫描 bundle 目录下所有非测试 JS 模块，新增模块（含子目录）不会漏检。
 const moduleFiles = readdirSync(new URL('.', import.meta.url), { recursive: true })
   .filter((file) => file.endsWith('.js') && !file.endsWith('.test.js'))
-  .filter((file) => !file.split('/').includes('node_modules'))
+  .filter((file) => !file.split(/[/\\]/).includes('node_modules')) // 平台无关（/ 与 \\ 均可）
   .sort()
 
 const importedBy = new Map()
@@ -57,7 +58,11 @@ const locationOf = (name) =>
   peers.has(name) ? 'peerDependencies' : dependencies.has(name) ? 'dependencies' : 'undeclared'
 const dshImports = imported.filter((name) => name.startsWith('@deepseek-ai/dsh-'))
 const utilImports = imported.filter(
-  (name) => name.startsWith('@deepseek-ai/') && !name.startsWith('@deepseek-ai/dsh-'),
+  // cordis 是宿主运行时（README 中 peers 的唯一例外），即使被 import 也不要求挪进 dependencies。
+  (name) =>
+    name.startsWith('@deepseek-ai/') &&
+    !name.startsWith('@deepseek-ai/dsh-') &&
+    name !== '@deepseek-ai/cordis',
 )
 const thirdPartyImports = imported.filter((name) => !name.startsWith('@deepseek-ai/'))
 
@@ -78,9 +83,14 @@ test('collects imports without false positives', () => {
     "import('@deepseek-ai/dsh-scope')",
     "import { x } from 'node:fs'",
     "import { y } from './local.js'",
+    "import {\n  d,\n} from '@deepseek-ai/dsh-launch-environment'",
+    "console.log('from', 'x')",
+    'const t = `${x}from \'plugin\'`',
+    "// import { x } from '@deepseek-ai/dsh-session'",
   ].join('\n')
   const packages = [...new Set([...importsOf(source)].filter(isExternal).map(packageOf))].sort()
   assert.deepEqual(packages, [
+    '@deepseek-ai/dsh-launch-environment',
     '@deepseek-ai/dsh-llm',
     '@deepseek-ai/dsh-session',
     '@deepseek-ai/schemastery',

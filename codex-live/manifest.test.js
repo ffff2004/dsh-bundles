@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 // 只读文本，不加载宿主包：这样测试不依赖 @deepseek-ai/* 是否可解析。
@@ -25,7 +25,20 @@ const devVersions = manifest.devDependencies ?? {}
 const peers = new Set(Object.keys(peerVersions))
 const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
 
-const imported = dshImportsOf(read('index.js'))
+// 扫描 bundle 根下所有非测试模块，新增文件不会漏检。
+const moduleFiles = readdirSync(new URL('.', import.meta.url))
+  .filter((name) => name.endsWith('.js') && !name.endsWith('.test.js'))
+  .sort()
+const importsByFile = new Map(moduleFiles.map((file) => [file, dshImportsOf(read(file))]))
+const importers = (name) =>
+  [...importsByFile].filter(([, names]) => names.has(name)).map(([file]) => file)
+const imported = new Set([...importsByFile.values()].flatMap((names) => [...names]))
+
+test('scans every non-test runtime module', () => {
+  assert.ok(moduleFiles.includes('index.js'), `scanned files: ${moduleFiles.join(', ')}`)
+  assert.ok(moduleFiles.includes('prompt-cache.js'), `scanned files: ${moduleFiles.join(', ')}`)
+  assert.equal(moduleFiles.some((file) => file.endsWith('.test.js')), false)
+})
 
 test('collects bare and re-exported imports', () => {
   const source = [
@@ -47,8 +60,8 @@ test('every imported dsh package is declared as a peer', () => {
   const misplaced = [...imported]
     .sort()
     .filter((name) => name.startsWith('@deepseek-ai/dsh-') && !peers.has(name))
-    .map((name) => `${name} (${dependencies.has(name) ? 'dependencies' : 'undeclared'})`)
-  assert.deepEqual(misplaced, [], `index.js imports that must be peerDependencies: ${misplaced.join(', ')}`)
+    .map((name) => `${importers(name).join(', ')} imports ${name} (${dependencies.has(name) ? 'dependencies' : 'undeclared'})`)
+  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be peerDependencies: ${misplaced.join(', ')}`)
 })
 
 test('imported non-dsh packages come from dependencies', () => {
@@ -56,14 +69,14 @@ test('imported non-dsh packages come from dependencies', () => {
   const misplaced = [...imported]
     .sort()
     .filter((name) => !name.startsWith('@deepseek-ai/dsh-') && !dependencies.has(name))
-    .map((name) => `${name} (${peers.has(name) ? 'peerDependencies' : 'undeclared'})`)
-  assert.deepEqual(misplaced, [], `index.js imports that must be dependencies: ${misplaced.join(', ')}`)
+    .map((name) => `${importers(name).join(', ')} imports ${name} (${peers.has(name) ? 'peerDependencies' : 'undeclared'})`)
+  assert.deepEqual(misplaced, [], `runtime modules importing packages that must be dependencies: ${misplaced.join(', ')}`)
 })
 
 test('peerDependencies lists only imported packages', () => {
   // @deepseek-ai/cordis 是唯一的豁免：宿主运行时，插件只通过 ctx 使用，从不直接 import。
   const unused = [...peers].filter((name) => name !== '@deepseek-ai/cordis' && !imported.has(name)).sort()
-  assert.deepEqual(unused, [], `peerDependencies entries that index.js never imports: ${unused.join(', ')}`)
+  assert.deepEqual(unused, [], `peerDependencies entries that no runtime module imports: ${unused.join(', ')}`)
 })
 
 test('dependencies and peerDependencies do not overlap', () => {

@@ -170,8 +170,6 @@
               provider: spawn
               toolName: subagent
               modelSelectionSettings: true
-              # Legacy field: not declared by the current tool-subagent schema.
-              backgroundMode: continuable
 
           # ── presentation ──────────────────────────────────────────────────
 
@@ -257,8 +255,6 @@
               provider: spawn
               toolName: subagent
               modelSelectionSettings: true
-              # Kept aligned with lean; not in the current tool-subagent schema.
-              backgroundMode: continuable
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
           # Scope-filtered assembly policy: keep the shared lean tools first.
@@ -341,8 +337,6 @@
               provider: spawn
               toolName: subagent
               modelSelectionSettings: true
-              # Kept aligned with lean; not in the current tool-subagent schema.
-              backgroundMode: continuable
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
           # Keep the official PTC-only guidance and generated SDK intact.

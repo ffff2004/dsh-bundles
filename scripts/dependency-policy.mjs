@@ -26,8 +26,9 @@ export const unusedPeerContracts = {
 export const readJson = path => JSON.parse(readFileSync(path, 'utf8'))
 const excluded = ['**/node_modules/**', '**/.git/**', '**/.dsh-source/**', '**/_site/**', '**/.plugin-market-cache/**']
 export const sourceFiles = dir => globSync('**/*.{js,mjs,cjs}', { cwd: dir, exclude: excluded }).sort()
-export const isTestFile = file => /(^|\/)(tests?|__tests__)\//u.test(file)
-  || /\.test\.(?:js|mjs|cjs)$/u.test(file) || file === 'check.mjs'
+// Paths are relative to the bundle root. Only root test locations get dev-only access.
+export const isTestFile = file => /^(?:tests?|__tests__)\//u.test(file)
+  || /^[^/]+\.test\.(?:js|mjs|cjs)$/u.test(file)
 export const isDshPackage = name => name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-')
 export function packageName(specifier) {
   if (isBuiltin(specifier) || /^(?:[./#]|[a-z][a-z\d+.-]*:)/iu.test(specifier)) return undefined

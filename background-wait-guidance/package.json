@@ -16,7 +16,7 @@
     "./subagents/icon": "./icon.svg"
   },
   "files": ["jobs.js", "subagents.js", "cordis.patch.yml", "README.md", "locale/**/*.json", "icon.svg"],
-  "scripts": { "test": "node --test tests/*.test.js" },
+  "scripts": { "test": "node --test" },
   "devDependencies": { "@deepseek-ai/cordis": "4.0.5", "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.3", "@deepseek-ai/dsh-llm": "0.2.1-rc.3", "@deepseek-ai/dsh-scope": "0.2.1-rc.3" },
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
 }

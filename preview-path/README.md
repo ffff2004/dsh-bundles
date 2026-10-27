@@ -75,9 +75,19 @@ whether the path is a directory.
 | `cordis.patch.yml` | Inserts the one plugin row |
 | `index.js` | Host half: empty, the row exists to carry the Client row |
 | `client.js` | Browser half: the shared editor, the directory page, the tab-menu item, and the address grammar |
-| `check.mjs` | Self-check for the plugin surface, grammar, copy, tab type, menu item, and every slot registration |
-| `navigation.test.mjs` | Real React behavioral tests for navigation intents, inputs, independent instances, refresh, cancellation, and stale targets (`pnpm test` runs both checks) |
+| [contract.test.mjs](<contract.test.mjs>) | `node:test` groups for the plugin surface, grammar, copy, tab type, menu item, and every slot registration |
+| [navigation.test.mjs](<navigation.test.mjs>) | Real React behavioral tests for navigation intents, inputs, independent instances, refresh, cancellation, and stale targets |
 | `locale/{en,zh}.json` | Display metadata for the Plugin Manager |
+
+## Tests
+
+From the repository root, run `pnpm --filter @local/dsh-preview-path test`.
+The bundle uses `node --test`, like every other bundle, discovering both test
+files with default per-file isolation. The contract tests preserve all 62
+original check labels across 11 explicit scenario groups and restore their
+`window` mock after the test. The existing React navigation tests remain
+unchanged. These tests do not verify browser layout or the live Host tab planner.
+Test locations and dependency checks follow the [repository policy](<../dependency-policy.md>).
 
 ## Install and remove
 

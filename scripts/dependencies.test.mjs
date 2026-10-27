@@ -94,6 +94,40 @@ test('production dev-only import is rejected; a test import is allowed', t => {
   passes(root, 'eslint')
 })
 
+for (const [file, allowed] of [
+  ['test/probe.js', true], ['test/nested/probe.mjs', true],
+  ['tests/probe.mjs', true], ['tests/nested/probe.cjs', true],
+  ['__tests__/probe.cjs', true], ['__tests__/nested/probe.js', true],
+  ['probe.test.js', true], ['probe.test.mjs', true], ['probe.test.cjs', true],
+  ['src/test/probe.js', false], ['src/tests/probe.js', false],
+  ['src/__tests__/probe.mjs', false], ['src/probe.test.js', false],
+  ['src/probe.test.mjs', false], ['src/probe.test.cjs', false],
+  ['check.mjs', false],
+]) {
+  test(`all declaration checks treat ${file} as ${allowed ? 'test' : 'production'}`, t => {
+    const pkg = base()
+    delete pkg.peerDependencies
+    pkg.devDependencies.yaml = '^2.8.1'
+    const root = fixture(t, [pkg], ["import '@deepseek-ai/schemastery'\n"])
+    const path = join(root, 'bundle-0', file)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, file.endsWith('.cjs')
+      ? "require('yaml'); require('@deepseek-ai/dsh-llm')\n"
+      : "import 'yaml'; import '@deepseek-ai/dsh-llm'\n")
+    if (allowed) {
+      passes(root, 'eslint')
+      passes(root, 'policy')
+    } else {
+      const result = run(root, 'eslint')
+      assert.equal(result.status, 1, result.output)
+      assert.match(result.output, /bundle\/no-extraneous-dependencies/u)
+      assert.match(result.output, /bundle\/own-manifest/u)
+      // The collector must also count this shared import as production use.
+      rejects(root, 'policy', /runtime shared-instance use requires both peerDependencies/u)
+    }
+  })
+}
+
 test('AST normalizes owned scoped subpaths and permits self-reference/Node builtins', t => {
   const pkg = base()
   pkg.dependencies['@earendil-works/pi-ai'] = '1.3.0'

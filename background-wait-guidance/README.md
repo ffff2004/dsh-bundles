@@ -34,7 +34,7 @@
 
 ## 安装
 
-通过 Plugin Manager 安装本目录。安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准；替换已安装包可能需要重启 DSH。版本约束由 `engines.dsh` 声明为 DSH 0.2.1 系列。
+通过 Plugin Manager 安装本目录。安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准；替换已安装包可能需要重启 DSH。加载范围以 [manifest](<package.json>) 的 `engines.dsh` 为准，保留 `0.2.1-rc.2` 下界并允许后续 0.2 版本；这不是全部 0.2.x 的逐版兼容保证，验证基线与边界见[依赖策略](<../dependency-policy.md>)。
 
 ## 验证
 

@@ -6,11 +6,12 @@ import {
 
 const extraneous = importX.rules['no-extraneous-dependencies']
 // Upstream's CommonJS visitor also visits factory(require) browser loaders.
-// Keep its established declaration rule, adapting only lexical require scope.
+// Keep its declaration rule, sharing test classification with the semantic CLI.
 const scopedExtraneous = {
   ...extraneous,
   create(context) {
-    const visitors = extraneous.create(context)
+    const options = { ...context.options[0], devDependencies: isTestFile(relative(context.options[0].packageDir, context.filename)) }
+    const visitors = extraneous.create(Object.create(context, { options: { value: [options] } }))
     return {
       ...visitors,
       CallExpression(node) {
@@ -49,7 +50,6 @@ export default [
     rules: {
       'bundle/no-extraneous-dependencies': ['error', {
         packageDir: bundle.dir,
-        devDependencies: [`${bundle.path}/**/*.test.{js,mjs,cjs}`, `${bundle.path}/test/**`, `${bundle.path}/tests/**`, `${bundle.path}/__tests__/**`, `${bundle.path}/check.mjs`],
         optionalDependencies: false,
         bundledDependencies: false,
       }],

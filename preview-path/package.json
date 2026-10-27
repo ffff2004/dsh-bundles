@@ -12,7 +12,7 @@
     "./icon": "./icon.svg"
   },
   "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
-  "scripts": { "test": "node check.mjs && node --test navigation.test.mjs" },
+  "scripts": { "test": "node --test" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": {

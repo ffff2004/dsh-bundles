@@ -33,7 +33,15 @@ manager.
 | `cordis.patch.yml` | Inserts the one plugin row |
 | `index.js` | Host half: the authenticated download route |
 | `client.js` | Browser half: the toolbar control |
-| `check.mjs` | Self-check for the host route and its route-path agreement with the browser half (`node check.mjs`) |
+| [contract.test.mjs](<contract.test.mjs>) | `node:test` groups for route registration/client agreement, HEAD headers, multi-window GET streaming, and refusals |
+
+## Tests
+
+From the repository root, run `pnpm --filter @local/dsh-preview-download test`.
+The bundle uses `node --test`, like every other bundle. The route tests preserve
+all 17 original check labels across four explicit scenario groups, using a real
+temporary file and cleaning it in `finally`; they do not send live requests.
+Test locations and dependency checks follow the [repository policy](<../dependency-policy.md>).
 
 ## Install and remove
 
@@ -48,7 +56,7 @@ undo, `remove_bundle @local/dsh-preview-download` and restart the profile.
   `/api` route.
 - The browser half cannot import the host half, so the route path is written in
   both `index.js` (`ROUTE_PATH`) and `client.js` (`ROUTE_URL`); changing one
-  requires changing the other. `check.mjs` now enforces that agreement.
+  requires changing the other. [Route contract tests](<contract.test.mjs>) enforce that agreement.
 - A failed gesture reports only on the control (error color, tooltip, and a
   polite status announcement); a richer toast would require copying the
   host `Toast` primitive, which persistent plugins must not load as a module.

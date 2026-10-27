@@ -19,7 +19,9 @@ pnpm test:lint  # 根检查器的真实 CLI 正反例
 pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 ```
 
-只跑一个 bundle：`pnpm --filter @local/dsh-shell-description test`。
+8 个 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @local/dsh-shell-description test`。
+
+测试源码放在 bundle 根 `test/`、`tests/`、`__tests__/`（含其中子目录）或根 `*.test.js/mjs/cjs`。只有这些位置可使用 dev-only 依赖；其它位置（包括 `src/tests/`、`src/*.test.*`）按生产源码检查。
 
 依赖声明约定（与 DSH 对 out-of-tree 插件的要求一致）：
 

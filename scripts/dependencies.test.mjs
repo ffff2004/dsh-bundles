@@ -5,18 +5,17 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
-import semver from 'semver'
-import { discoverBundles, dshPeerRange, engineRange } from './dependency-policy.mjs'
+import { discoverBundles } from './dependency-policy.mjs'
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cli = join(repo, 'scripts/check-dependencies.mjs')
 const json = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2))
 const base = () => ({
   name: '@local/fixture', version: '1.0.0', type: 'module',
-  dsh: { bundle: { patch: './cordis.patch.yml' } }, engines: { dsh: engineRange },
+  dsh: { bundle: { patch: './cordis.patch.yml' } }, engines: { dsh: '>=1.2.0 <2.0.0' },
   dependencies: { '@deepseek-ai/schemastery': '3.18.5' },
-  peerDependencies: { '@deepseek-ai/dsh-llm': dshPeerRange },
-  devDependencies: { '@deepseek-ai/dsh-llm': '0.2.1-rc.3' },
+  peerDependencies: { '@deepseek-ai/dsh-llm': '>=1.3.0-beta.2 <2.0.0-0' },
+  devDependencies: { '@deepseek-ai/dsh-llm': '1.3.0-beta.4' },
 })
 const baseline = "import '@deepseek-ai/dsh-llm'\nimport '@deepseek-ai/schemastery'\n"
 function fixture(t, manifests = [base()], sources = [baseline]) {
@@ -142,13 +141,21 @@ test('local factory require is not Node require; nonliteral loading stays outsid
 })
 
 for (const [title, change, pattern] of [
-  ['shared dependency', p => { p.dependencies['@deepseek-ai/dsh-llm'] = '0.2.1-rc.3' }, /shared-instance packages belong/u],
+  ['shared dependency', p => { p.dependencies['@deepseek-ai/dsh-llm'] = p.devDependencies['@deepseek-ai/dsh-llm'] }, /shared-instance packages belong/u],
+  ['shared optional dependency', p => { p.optionalDependencies = { '@deepseek-ai/dsh-llm': '1.3.0-beta.4' } }, /shared-instance packages belong/u],
   ['missing peer', p => { delete p.peerDependencies['@deepseek-ai/dsh-llm'] }, /requires both peerDependencies/u],
   ['missing dev', p => { delete p.devDependencies['@deepseek-ai/dsh-llm'] }, /requires both peerDependencies/u],
-  ['nonexact dev', p => { p.devDependencies['@deepseek-ai/dsh-llm'] = '^0.2.1-rc.3' }, /must be an exact SemVer/u],
-  ['dev outside peer', p => { p.peerDependencies['@deepseek-ai/dsh-llm'] = '>=0.2.2 <0.3.0-0' }, /does not satisfy peer/u],
-  ['engine lower bound changed', p => { p.engines.dsh = '>=0.2.1-rc.3 <0.3.0-0' }, /engines.dsh must be/u],
-  ['peer lower bound conflated with engine', p => { p.peerDependencies['@deepseek-ai/dsh-llm'] = engineRange }, /DSH peer must be/u],
+  ['nonexact dev', p => { p.devDependencies['@deepseek-ai/dsh-llm'] = '^1.3.0-beta.4' }, /must be an exact SemVer/u],
+  ['dev outside peer', p => { p.peerDependencies['@deepseek-ai/dsh-llm'] = '>=1.4.0 <2.0.0' }, /does not satisfy peer/u],
+  ['missing engines', p => { delete p.engines }, /engines.dsh must be a non-empty valid SemVer range/u],
+  ['missing dsh engine', p => { p.engines = { node: '>=24' } }, /engines.dsh must be a non-empty valid SemVer range/u],
+  ['invalid engine', p => { p.engines.dsh = 'not-a-range' }, /engines.dsh must be a non-empty valid SemVer range/u],
+  ['empty engine', p => { p.engines.dsh = '' }, /engines.dsh must be a non-empty valid SemVer range/u],
+  ['nonstring engine', p => { p.engines.dsh = 42 }, /engines.dsh must be a non-empty valid SemVer range/u],
+  ['invalid peer', p => { p.peerDependencies['@deepseek-ai/dsh-llm'] = 'not-a-range' }, /invalid peer range/u],
+  ['empty peer', p => { p.peerDependencies['@deepseek-ai/dsh-llm'] = '' }, /invalid peer range/u],
+  ['nonstring peer', p => { p.peerDependencies['@deepseek-ai/dsh-llm'] = 42 }, /invalid peer range/u],
+  ['dsh peer replacing engines', p => { p.peerDependencies['@deepseek-ai/dsh'] = '*' }, /Use engines.dsh, not a dsh peer/u],
   ['unknown scoped classification', p => { p.devDependencies['@deepseek-ai/new-host'] = '1.0.0' }, /classify explicitly/u],
 ]) {
   test(`semantic CLI rejects ${title}`, t => {
@@ -186,14 +193,14 @@ test('cordis ctx contract is scoped to codex-live, exact 4.0.5 is not DSH 0.x', 
   rejects(fixture(t, [pkg]), 'policy', /stale unused-peer host contract/u)
 })
 
-test('cross-bundle host dev drift is rejected by Syncpack and semantic CLI', t => {
+test('only Syncpack rejects cross-bundle drift when each exact dev satisfies its peer', t => {
   const a = base()
   const b = base()
   b.name = '@local/other'
-  b.devDependencies['@deepseek-ai/dsh-llm'] = '0.2.1-rc.4'
+  b.devDependencies['@deepseek-ai/dsh-llm'] = '1.3.0-beta.5'
   const root = fixture(t, [a, b])
   rejects(root, 'syncpack', /dsh-llm/u)
-  rejects(root, 'policy', /inconsistent cross-bundle host dev versions/u)
+  passes(root, 'policy')
 })
 
 test('Syncpack separates peer ranges from exact dev versions, and enforces owned versions', t => {
@@ -228,17 +235,39 @@ test('root tooling cannot become a market bundle; repository discovery excludes 
   rejects(root, 'policy', /market discovery would select only the root/u)
 })
 
-test('includePrerelease:true range evidence: engine rc.2, peer rc.3, later rc/patch, no 0.3 prerelease', () => {
-  const cases = [
-    ['0.2.1-rc.1', false, false], ['0.2.1-rc.2', true, false],
-    ['0.2.1-rc.3', true, true], ['0.2.1-rc.4', true, true],
-    ['0.2.1', true, true], ['0.2.2-rc.1', true, true],
-    ['0.2.2', true, true], ['0.2.9', true, true], ['0.2.99-rc.1', true, true],
-    ['0.3.0-0', false, false], ['0.3.0-alpha.1', false, false],
-    ['0.3.0-rc.1', false, false], ['0.3.0', false, false], ['0.3.1', false, false],
-  ]
-  for (const [version, engine, peer] of cases) {
-    assert.equal(semver.satisfies(version, engineRange, { includePrerelease: true }), engine, `engine ${version}`)
-    assert.equal(semver.satisfies(version, dshPeerRange, { includePrerelease: true }), peer, `peer ${version}`)
-  }
-})
+for (const [title, engine, peer, dev] of [
+  ['raised minimum and new prerelease dev', '>=2.4.0 <3.0.0-0', '>=2.5.0-rc.2 <3.0.0-0', '2.5.0-rc.3'],
+  ['tightened package range', '~1.3.2', '>=1.3.2 <1.3.4', '1.3.3'],
+  ['wildcard ranges', '*', '*', '4.0.0-next.1'],
+  ['cross-minor compatibility', '>=0.1.0 <0.8.0', '>=0.3.0 <0.7.0', '0.6.0'],
+  ['equal engine and peer floors', '>=1.3.0-beta.2 <2.0.0-0', '>=1.3.0-beta.2 <2.0.0-0', '1.3.0-beta.4'],
+]) {
+  test(`semantic CLI accepts manifest-owned versions: ${title}`, t => {
+    const pkg = base()
+    pkg.engines.dsh = engine
+    pkg.peerDependencies['@deepseek-ai/dsh-llm'] = peer
+    pkg.devDependencies['@deepseek-ai/dsh-llm'] = dev
+    passes(fixture(t, [pkg]), 'policy')
+  })
+}
+
+for (const [peer, dev, satisfied] of [
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.6.0-beta.1', false],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.6.0-beta.2', true],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.6.0-beta.3', true],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.6.0', true],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.6.1-rc.1', true],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.7.0-0', false],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.7.0-rc.1', false],
+  ['>=1.6.0-beta.2 <1.7.0-0', '1.7.0', false],
+  ['>=1.6.0-beta.2 <1.7.0', '1.7.0-rc.1', true],
+]) {
+  test(`semantic CLI includePrerelease:true: ${dev} ${satisfied ? 'satisfies' : 'does not satisfy'} ${peer}`, t => {
+    const pkg = base()
+    pkg.peerDependencies['@deepseek-ai/dsh-llm'] = peer
+    pkg.devDependencies['@deepseek-ai/dsh-llm'] = dev
+    const root = fixture(t, [pkg])
+    if (satisfied) passes(root, 'policy')
+    else rejects(root, 'policy', /does not satisfy peer/u)
+  })
+}

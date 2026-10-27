@@ -3,14 +3,15 @@ import { join, resolve } from 'node:path'
 import { Linter } from 'eslint'
 import semver from 'semver'
 import {
-  discoverBundles, dshPeerRange, engineRange, importVisitors, isDshPackage,
-  isTestFile, ownedPackages, packageName, sharedPackages, sourceFiles, unusedPeerContracts,
+  discoverBundles, importVisitors, isTestFile, ownedPackages, packageName,
+  sharedPackages, sourceFiles, unusedPeerContracts,
 } from './dependency-policy.mjs'
 
 const options = { includePrerelease: true }
+const validRange = range => typeof range === 'string' && range.trim() !== ''
+  && semver.validRange(range, options) !== null
 const root = resolve(process.argv[2] ?? '.')
 const errors = []
-const developmentVersions = new Map()
 let files = 0
 
 try {
@@ -42,7 +43,7 @@ try {
         errors.push(`${bundle.path}/${file}:${message.line}: ${message.message}`)
       }
     }
-    if (pkg.engines?.dsh !== engineRange) fail(`engines.dsh must be ${engineRange}`)
+    if (!validRange(pkg.engines?.dsh)) fail('engines.dsh must be a non-empty valid SemVer range')
     if ('@deepseek-ai/dsh' in peers) fail('Use engines.dsh, not a dsh peer')
     const declared = new Set([
       ...Object.keys(deps), ...Object.keys(peers), ...Object.keys(dev),
@@ -61,19 +62,14 @@ try {
       }
       if (name in dev) {
         if (!semver.valid(dev[name])) fail(`${name}: devDependency must be an exact SemVer`)
-        if (isDshPackage(name) && dev[name] !== '0.2.1-rc.3') fail(`${name}: DSH development versions must stay pinned consistently at 0.2.1-rc.3`)
-        const previous = developmentVersions.get(name)
-        if (previous && previous !== dev[name]) fail(`${name}: inconsistent cross-bundle host dev versions (${previous} vs ${dev[name]})`)
-        developmentVersions.set(name, dev[name])
       }
     }
     for (const [name, range] of Object.entries(peers)) {
       if (!sharedPackages.has(name)) fail(`${name}: peers must be explicitly classified shared-instance packages`)
-      if (!semver.validRange(range, options)) fail(`${name}: invalid peer range ${range}`)
+      if (!validRange(range)) fail(`${name}: invalid peer range ${range}`)
       else if (!semver.valid(dev[name]) || !semver.satisfies(dev[name], range, options)) {
         fail(`${name}: exact dev ${dev[name]} does not satisfy peer ${range} (includePrerelease:true)`)
       }
-      if (isDshPackage(name) && range !== dshPeerRange) fail(`${name}: DSH peer must be ${dshPeerRange}`)
       if (!runtimeImports.has(name) && !unusedPeerContracts[pkg.name]?.[name]) {
         fail(`${name}: unused peer (production import or explicit host contract required)`)
       }

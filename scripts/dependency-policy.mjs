@@ -3,9 +3,6 @@ import { isBuiltin } from 'node:module'
 import { join, relative, resolve } from 'node:path'
 import { parse } from 'yaml'
 
-export const engineRange = '>=0.2.1-rc.2 <0.3.0-0'
-export const dshPeerRange = '>=0.2.1-rc.3 <0.3.0-0'
-
 // Identity-bearing host modules. Classification is explicit, not an npm-scope rule.
 export const sharedPackages = new Set([
   '@deepseek-ai/cordis',
@@ -29,7 +26,6 @@ export const sourceFiles = dir => globSync('**/*.{js,mjs,cjs}', { cwd: dir, excl
 // Paths are relative to the bundle root. Only root test locations get dev-only access.
 export const isTestFile = file => /^(?:tests?|__tests__)\//u.test(file)
   || /^[^/]+\.test\.(?:js|mjs|cjs)$/u.test(file)
-export const isDshPackage = name => name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-')
 export function packageName(specifier) {
   if (isBuiltin(specifier) || /^(?:[./#]|[a-z][a-z\d+.-]*:)/iu.test(specifier)) return undefined
   return specifier.split('/').slice(0, specifier.startsWith('@') ? 2 : 1).join('/')

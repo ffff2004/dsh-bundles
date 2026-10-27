@@ -1,29 +1,22 @@
 # 兼容与依赖检查
 
-## 兼容声明与测试基线
+## 版本声明与语义关系
 
-8 个 bundle 的 `engines.dsh` 保留最低版本 `>=0.2.1-rc.2`，上界为 `<0.3.0-0`。
-[codex-live manifest](<codex-live/package.json>) 的 DSH peers 保留自己的最低版本 `>=0.2.1-rc.3`，上界相同；开发依赖精确固定 `0.2.1-rc.3`。Cordis 是非 DSH 版本线，peer/dev 仍为 `4.0.5`。
+每个 bundle 的 manifest 是版本、`engines.dsh`、peer/dev 声明的唯一来源。检查器不另存 DSH 发布基线或中央版本配置；升级精确 dev、提高最低版本或单包收紧范围时，只需更新相应 manifest 并完成 review、统一 gates 和必要的运行时验证。
 
-检查 peer/dev 满足关系使用 `semver.satisfies(dev, peer, { includePrerelease: true })`，与 DSH 的 prerelease 判定一致；Syncpack 的 `sameRange` 只检查相交，不能替代此包含检查。`<0.3.0-0` 同时排除 `0.3.0-rc.1` 与 `0.3.0`，而不是只排除稳定版。
+`engines.dsh` 必须存在且为非空合法 SemVer 范围；共享实例包的 dev 必须为精确 SemVer，peer 必须为非空合法范围。满足关系使用 `semver.satisfies(dev, peer, { includePrerelease: true })`，与 DSH 的 prerelease 判定一致；Syncpack 的 `sameRange` 只检查相交，不能替代此满足检查。engines 与 peer 各自声明范围，不要求下界相同，非 DSH 包也按自己的版本线验证。
 
-| 版本 | engines | DSH peers |
-| --- | --- | --- |
-| 0.2.1-rc.1 | 拒绝 | 拒绝 |
-| 0.2.1-rc.2 | 接受 | 拒绝 |
-| 0.2.1-rc.3、rc.4、0.2.1 | 接受 | 接受 |
-| 0.2.2-rc.1、0.2.2、0.2.9 | 接受 | 接受 |
-| 0.3.0-0、alpha.1、rc.1、0.3.0 | 拒绝 | 拒绝 |
+范围的语法合法性不等于合理性。检查器允许 `*` 和跨 0.3 的合法声明，不自动限制上界；范围是否过宽、收紧或放宽的影响由 manifest diff/review 判断。使用 prerelease 时尤其需要复核上界：例如 `<2.0.0-0` 同时排除 `2.0.0-rc.1` 和稳定版，而 `<2.0.0` 在 `includePrerelease: true` 下允许该 rc。
 
-这些是加载/声明策略，不代表已在全部 0.2.x 上逐版或实机验证。行为测试仍使用精确固定的开发依赖；已知不兼容应另行收紧相应声明与策略。
+合法声明与测试通过不是未来版本的运行时兼容保证；行为测试使用各 manifest 中的精确开发依赖，不代表已逐版或实机验证整个兼容范围。
 
 ## 工具分工
 
 统一入口为根 `pnpm lint`，只读、不自动修复：
 
-1. [Syncpack 配置](<.syncpackrc.json>)：使用 v15 的 `syncpack lint`，从 workspace 自动发现包；peers 与 dev/prod 分组检查一致性，避免把兼容范围改回精确版本。根工具依赖单独忽略，不约束 bundle 的独立声明。
+1. [Syncpack 配置](<.syncpackrc.json>)：使用 v15 的 `syncpack lint`，从 workspace 自动发现包；独立负责跨 bundle 版本一致性，peers 与 dev/prod 分组，避免把兼容范围改回精确版本。根工具依赖单独忽略，不约束 bundle 的独立声明。
 2. [ESLint 配置](<eslint.config.mjs>)：按每个 bundle 自己的 manifest 配置现成 `no-extraneous-dependencies`；适配局部 `require` 遮蔽，并复用语义检查器的测试位置分类。补充声明检查，防止现成规则因包尚未安装/无法解析而漏报，禁止根依赖或生产 dev-only 兜底。
-3. [薄语义检查器](<scripts/check-dependencies.mjs>)：显式共享实例分类、peer/dev 配对、精确 dev 与满足关系、宿主 dev 跨 bundle 一致、unused peer、兼容声明与发现保护。使用 ESLint 的 AST/scopes 收集源码 import，不自行解析 JavaScript。
+3. [薄语义检查器](<scripts/check-dependencies.mjs>)：有效 engines 范围、显式共享实例分类、peer/dev 配对、精确 dev 与满足关系、unused peer/宿主契约例外、发现保护及禁止 `@deepseek-ai/dsh` peer。仅验证每个 bundle 的语义关系，不重复 Syncpack 的跨包一致性检查；使用 ESLint 的 AST/scopes 收集源码 import，不自行解析 JavaScript。
 
 [策略定义](<scripts/dependency-policy.mjs>) 是分类和例外的单一来源。schemastery 属于无状态自有依赖，不因 `@deepseek-ai/` scope 被升级为 peer。Cordis 的唯一 unused peer 例外限定在 codex-live：宿主通过 `apply(ctx)` 提供 Cordis 契约；其它 bundle 同名 peer 或仅测试 import 不享受例外。陈旧例外也报错。
 
@@ -48,4 +41,4 @@ pnpm -r test
 
 8 个 bundle 的 `test` script 统一为 `node --test`，按 Node 默认发现运行测试文件；现有测试位置保持不变。两个 preview bundle 的[下载路由测试](<preview-download/contract.test.mjs>)与[客户端契约测试](<preview-path/contract.test.mjs>)均注册显式 `node:test` 场景组，保留原自检的逐标签聚合断言；浏览器 mock 在测试结束时还原，下载临时文件在 finally 中清理。
 
-`pnpm test:lint` 通过真实 Syncpack、ESLint 和语义 CLI 运行临时正反例，覆盖缺声明、根兜底、dev-only、共享实例字段/配对/版本、unused peer 与契约例外、新 bundle 发现，并验证 prerelease 上下界。`pnpm -r test` 不执行根检查器测试，CI 显式运行以上全部 gates；CI 使用 Node 24，本地实施验证使用 Node 26。市场 PR job 仍只读取远端 refs，不能代替本地工作树检查。
+`pnpm test:lint` 通过真实 Syncpack、ESLint 和语义 CLI 运行临时正反例，覆盖缺声明、根兜底、dev-only、共享实例字段/配对/版本、unused peer 与契约例外、新 bundle 发现，并验证不同合法范围/新精确 dev 可通过、prerelease 满足关系及跨包漂移仅由 Syncpack 拒绝。`pnpm -r test` 不执行根检查器测试，CI 显式运行以上全部 gates；CI 使用 Node 24，本地实施验证使用 Node 26。市场 PR job 仍只读取远端 refs，不能代替本地工作树检查。

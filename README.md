@@ -15,7 +15,7 @@
 | [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`；超时终止时不添加，不修改默认超时或工具参数。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
 
-具体配置及重启要求以各 bundle 的 README 为准；加载范围以各自 manifest 为准。当前 8 个 bundle 的 `engines.dsh` 为 `>=0.2.1-rc.2 <0.3.0-0`；放宽加载范围不代表已逐版验证全部 0.2.x。DSH peer 最低版本与 engines 分开保留，详情见[兼容与依赖策略](<dependency-policy.md>)。
+具体配置及重启要求以各 bundle 的 README 为准；各自 manifest 是加载范围与开发测试版本的唯一来源。工具验证依赖语义关系，不固定 DSH 发布基线；范围是否合理由 manifest diff/review 判断，合法声明与测试通过不代表未来版本的运行时兼容保证。详情见[兼容与依赖策略](<dependency-policy.md>)。
 
 ## 使用
 

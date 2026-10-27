@@ -3,7 +3,9 @@
 [CI 工作流](<.github/workflows/ci.yml>) 使用 DSH 官方 reference generator，自动生成索引及图标并分发到 GitHub Pages；不需要自建后端，也不向 Git 提交生成结果。
 CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 URL，在 runner 临时目录生成输入清单，
 由生成器从远端默认分支发现各 bundle 子目录。无需在仓库中维护静态清单，临时清单也不会进入 Pages artifact。
-同一工作流的 `test` job 在 PR、tag 和手动运行时先安装 workspace 依赖并执行 `pnpm -r test`；部署要求 `market` 与 `test` 都通过。
+同一工作流的 `test` job 在 PR、tag 和手动运行时使用 Node 24，依次执行 `pnpm install --frozen-lockfile`、`pnpm lint`（只读）、`pnpm test:lint`（根检查器真实 CLI 正反例）和 `pnpm -r test`（bundle 行为测试）；根 scripts 不会被递归测试自动执行，必须显式运行。部署仍要求 `market` 与 `test` 都通过。
+
+根 [工具 manifest](<package.json>) 只承载精确固定的开发工具，不声明 `dsh.bundle`；市场继续通过 [workspace globs](<pnpm-workspace.yaml>) 发现 bundle 子目录，根工具不会变成市场包。lint 同时拒绝未被 workspace 覆盖的 bundle，避免新增目录绕过本地检查。兼容范围、共享实例分类与静态检查边界见[依赖策略](<dependency-policy.md>)。
 
 ## 首次启用
 

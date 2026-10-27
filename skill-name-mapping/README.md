@@ -54,4 +54,4 @@ node --check index.js
 node --check discovery.js
 ```
 
-使用 Harness `plugin_manager` 安装本目录；更新已安装包时先 remove 再 install，以结果和 live Config 验证新代码已应用。版本约束由 `engines.dsh` 声明为 DSH 0.2.1 系列，无 install/build scripts，图标为本插件原创 SVG。
+使用 Harness `plugin_manager` 安装本目录；更新已安装包时先 remove 再 install，以结果和 live Config 验证新代码已应用。加载范围以 [manifest](<package.json>) 的 `engines.dsh` 为准，保留 `0.2.1-rc.2` 下界并允许后续 0.2 版本；这不是全部 0.2.x 的逐版兼容保证，验证基线与边界见[依赖策略](<../dependency-policy.md>)。无 install/build scripts，图标为本插件原创 SVG。

@@ -1,9 +1,9 @@
 {
   "name": "@local/dsh-preview-download",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
-  "engines": { "dsh": ">=0.2.1-rc.2 <0.2.2-0" },
+  "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "meta": {
     "title": "Preview download",
     "description": "Adds a download control to the Web document-preview toolbar, streaming the previewed workspace file from an authenticated Host route."
@@ -12,7 +12,7 @@
     ".": "./index.js",
     "./client": "./client.js"
   },
-  "scripts": { "test": "node check.mjs" },
+  "scripts": { "test": "node --test" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": {

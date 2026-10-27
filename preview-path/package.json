@@ -1,10 +1,10 @@
 {
   "name": "@local/dsh-preview-path",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "description": "Make Web UI paths editable and browse directories by path, opening the typed file or directory in place.",
-  "engines": { "dsh": ">=0.2.1-rc.2 <0.2.2-0" },
+  "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -12,7 +12,7 @@
     "./icon": "./icon.svg"
   },
   "files": ["index.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
-  "scripts": { "test": "node check.mjs && node --test navigation.test.mjs" },
+  "scripts": { "test": "node --test" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": {

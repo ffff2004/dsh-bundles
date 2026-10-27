@@ -19,17 +19,10 @@ pnpm test:lint  # 根检查器的真实 CLI 正反例
 pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 ```
 
-8 个 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @local/dsh-shell-description test`。
+所有 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @local/dsh-shell-description test`。
 
 测试源码放在 bundle 根 `test/`、`tests/`、`__tests__/`（含其中子目录）或根 `*.test.js/mjs/cjs`。只有这些位置可使用 dev-only 依赖；其它位置（包括 `src/tests/`、`src/*.test.*`）按生产源码检查。
 
-依赖声明约定（与 DSH 对 out-of-tree 插件的要求一致）：
-
-- 运行时需要与宿主共享实例的包 → `peerDependencies` 兼容范围 + `devDependencies` 精确版本；dev 必须满足 peer（`includePrerelease: true`）。跨 bundle 版本一致性由 Syncpack 检查，语义检查器不重复实现。分类按[显式策略](<scripts/dependency-policy.mjs>)，不按 npm scope 一刀切。
-- 仅测试使用的运行时包 → 只放 `devDependencies`，不为了统一格式新增 peer。
-- 第三方库与无状态工具包（如 schemastery）→ `dependencies`；生产 import 必须由本 bundle 自己声明，根依赖与 dev-only 声明不能兜底。
-- 每个 bundle 的 manifest 是版本声明的唯一来源；`engines.dsh` 必须为合法范围，peer 保留自己的范围，不用 `@deepseek-ai/dsh` peer 代替 engines。检查器验证语义关系，不另存发布基线或限制合法范围的上界；范围是否合理由 manifest diff/review 判断，合法声明与测试通过都不是未来兼容保证。
-
-修改依赖、源码加载方式或新增 bundle 时，先读[依赖检查策略与边界](<dependency-policy.md>)。新增共享实例包或 unused peer 例外时，在显式策略中记录分类或宿主契约原因，并补 CLI 正反例。
+新增 bundle，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<dependency-policy.md>)。新增共享实例包或 unused peer 例外时，在显式策略中记录分类或宿主契约原因，并补 CLI 正反例。
 
 新增或移动 bundle 目录时检查 [workspace globs](<pnpm-workspace.yaml>) 覆盖情况；lint 会拒绝未覆盖的 bundle。根包仅承载开发工具，保持 private 且不声明 `dsh.bundle`，以免改变市场发现优先级。

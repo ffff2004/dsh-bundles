@@ -1,8 +1,16 @@
 # 兼容与依赖检查
 
+## 依赖声明约定
+
+与 DSH 对 out-of-tree 插件的要求一致：
+
+- 运行时需要与宿主共享实例的包 → `peerDependencies` + `devDependencies`；分类按[显式策略](<scripts/dependency-policy.mjs>)，不按 npm scope 一刀切。
+- 仅测试使用的运行时包 → 只放 `devDependencies`，不为了统一格式新增 peer。
+- 第三方库与无状态工具包（如 schemastery）→ `dependencies`；生产 import 必须由本 bundle 自己声明，根依赖与 dev-only 声明不能兜底。
+
 ## 版本声明与语义关系
 
-每个 bundle 的 manifest 是版本、`engines.dsh`、peer/dev 声明的唯一来源。检查器不另存 DSH 发布基线或中央版本配置；升级精确 dev、提高最低版本或单包收紧范围时，只需更新相应 manifest 并完成 review、统一 gates 和必要的运行时验证。
+每个 bundle 的 manifest 是版本、`engines.dsh`、peer/dev 声明的唯一来源。宿主加载范围由 `engines.dsh` 声明，不用 `@deepseek-ai/dsh` peer 代替。检查器不另存 DSH 发布基线或中央版本配置；升级精确 dev、提高最低版本或单包收紧范围时，只需更新相应 manifest 并完成 review、统一 gates 和必要的运行时验证。
 
 `engines.dsh` 必须存在且为非空合法 SemVer 范围；共享实例包的 dev 必须为精确 SemVer，peer 必须为非空合法范围。满足关系使用 `semver.satisfies(dev, peer, { includePrerelease: true })`，与 DSH 的 prerelease 判定一致；Syncpack 的 `sameRange` 只检查相交，不能替代此满足检查。engines 与 peer 各自声明范围，不要求下界相同，非 DSH 包也按自己的版本线验证。
 

@@ -8,6 +8,8 @@ use conventional commit `<type>[(<bundle-name>)]: ...`
 
 插件市场发布、CI/Pages 维护或本地生成索引时，先读 [发布说明](<plugin-market-publishing.md>)。
 
+新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
+
 ## 本地开发
 
 仓库使用一个 pnpm workspace 共享安装和锁文件；每个 bundle 仍是可独立安装的包，`package.json` 中的声明才是发布后真正生效的内容。

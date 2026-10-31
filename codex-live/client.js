@@ -60,7 +60,7 @@
   /** Simplified Chinese dictionary (the key-set source of truth). */
   const zh = {
     'nav': 'Codex 额度',
-    'intro': '数据来自 codex CLI 的登录凭据，只读展示；使用重置券会真实重置用量。',
+    'intro': '数据来自 Codex CLI 的登录凭据，只读展示',
     'refresh': '刷新',
     'updatedAt': '更新于 {time}',
     'windowFallback': '窗口',
@@ -109,7 +109,7 @@
   /** English dictionary, key-identical to the Chinese source of truth. */
   const en = {
     'nav': 'Codex quota',
-    'intro': 'Data comes from the codex CLI login credential and is read-only; redeeming a reset credit really resets usage.',
+    'intro': 'Data comes from the Codex CLI login credential and is read-only.',
     'refresh': 'Refresh',
     'updatedAt': 'Updated at {time}',
     'windowFallback': 'Window',

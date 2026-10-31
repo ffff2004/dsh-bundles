@@ -11,10 +11,26 @@
  */
 
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { homedir } from 'node:os'
+import { join, sep } from 'node:path'
 
 /** The codex credential file the request token is read from. */
 export const AUTH_FILE = 'auth.json'
+
+/**
+ * The credential file for one codex home, shortened to `~/…` for display.
+ *
+ * The quota page prints this path when the credential is unusable, so it must
+ * follow `codexHome`: a hardcoded default there would tell someone with a custom
+ * directory to refresh a file that does not exist.
+ * @param codexHome - directory holding `auth.json`.
+ * @returns the path to show, with the user's home directory abbreviated.
+ */
+export function authFileDisplayPath(codexHome) {
+  const path = join(codexHome, AUTH_FILE)
+  const home = homedir()
+  return path.startsWith(home + sep) ? `~${path.slice(home.length)}` : path
+}
 
 /**
  * Read the codex CLI's current credential.

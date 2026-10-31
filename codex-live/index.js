@@ -39,7 +39,7 @@
 import { watch } from 'node:fs'
 import { access, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join, sep } from 'node:path'
+import { join } from 'node:path'
 
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
@@ -48,9 +48,10 @@ import { openAICodexResponsesApi } from '@earendil-works/pi-ai/api/openai-codex-
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import z from '@deepseek-ai/schemastery'
 
-import { AUTH_FILE, readCodexAuth } from './auth.js'
+import { AUTH_FILE, authFileDisplayPath, readCodexAuth } from './auth.js'
 import { withoutPromptCacheKey } from './prompt-cache.js'
 import { createQuotaService } from './quota.js'
+import { quotaRoutes } from './routes.js'
 
 /** The pi-ai catalog route this provider mirrors; its entries are the metadata source. */
 const CATALOG_PROVIDER = 'openai-codex'
@@ -423,7 +424,7 @@ export function apply(ctx, config) {
     fetchJson,
     now: Date.now,
     // The page prints this in its "run codex" hint, so it must follow `codexHome`.
-    authPath: displayPath(join(codexHome, AUTH_FILE)),
+    authPath: authFileDisplayPath(codexHome),
   })
 
   /*
@@ -433,40 +434,18 @@ export function apply(ctx, config) {
    * route ownership, so both disappear when the connection does.
    */
   ctx.inject(['connection'], (scoped) => {
+    const routes = quotaRoutes(quota)
     scoped.connection.fetch.register({
       path: QUOTA_PATH,
       methods: ['GET'],
       requestBody: 'buffered',
-      fetch: async (request) => {
-        const refresh = new URL(request.url).searchParams.get('refresh') === '1'
-        // Every domain outcome, including failures, is a 200 with a `status`:
-        // the page distinguishes them, and a non-2xx would reach it as a blob.
-        return jsonResponse(200, await quota.snapshot({ refresh }))
-      },
+      fetch: routes.read,
     })
     scoped.connection.fetch.register({
       path: CONSUME_PATH,
       methods: ['POST'],
       requestBody: 'buffered',
-      fetch: async (request) => {
-        let body
-        try {
-          body = await request.json()
-        } catch {
-          return jsonResponse(400, { error: 'invalid-request' })
-        }
-        try {
-          return jsonResponse(200, await quota.consume({
-            redeemRequestId: body?.redeemRequestId,
-            creditId: body?.creditId,
-          }))
-        } catch (error) {
-          const detail = error instanceof Error ? error.message : 'codex-live: redemption failed'
-          return error?.code === 'invalid'
-            ? jsonResponse(400, { error: 'invalid-request', detail })
-            : jsonResponse(502, { error: 'upstream-error', detail })
-        }
-      },
+      fetch: routes.consume,
     })
   })
 }
@@ -488,24 +467,6 @@ async function fetchJson(url, { method, headers, body, signal }) {
   if (response.status < 200 || response.status >= 300) return { status: response.status, body: undefined }
   const text = await response.text()
   return { status: response.status, body: text.length === 0 ? undefined : JSON.parse(text) }
-}
-
-/**
- * Shorten a credential path under the user's home to `~/…` for display.
- * @param path - absolute path to the codex credential file.
- * @returns the display form, unchanged when it is outside the home directory.
- */
-function displayPath(path) {
-  const home = homedir()
-  return path.startsWith(home + sep) ? `~${path.slice(home.length)}` : path
-}
-
-/** A JSON response the browser half can read; these routes never cache. */
-function jsonResponse(status, body) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  })
 }
 
 /** Codex's own ordering key; entries without one keep their place after the ordered ones. */

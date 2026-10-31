@@ -65,6 +65,7 @@
 - 券详情超时 4s（usage 10s）；失败、超时、解析失败都只降级为 `items: null`，额度数字照常显示。
 - `detail` 只可能是 `HTTP <status>` / `timeout` / `network`；token 与响应体永远不出 Host。
 - 凭据路径跟随 `codexHome`：默认显示 `~/.codex/auth.json`，自定义目录时显示实际路径。
+- 没有 `account_id` 的凭据直接归为 `no-plan` 且**不发请求**：`ChatGPT-Account-Id` 是必需请求头，API-key 登录正是这种形态。
 
 页面：
 
@@ -73,7 +74,7 @@
 - 重置时间取上游 `reset_at`（缺失时用 `reset_after_seconds` 推算）：同一本地日只显示 `HH:mm`，跨日显示 `M 月 D 日 HH:mm`。
 - 券列表按到期时间升序；严格最早的一张加粗并带视觉隐藏的「最近过期」，7 天内到期（含已过期）的到期时间用 warn 色。
 - 「使用」弹 Modal 二次确认，文案带当前各窗口的剩余百分比、券到期时间与不可撤销提示；确认的券不是最早那张时，追加「还有更早过期的券（…）」提示。
-- 四种 outcome 各有独立文案；成功后重新读取。`items: null` 时不提供「使用」（`creditId` 必填）。
+- 四种 outcome 各有独立文案；**任意** outcome 之后都会重新读取（券的状态可能已在上游改变，失败也可能如此）。Host 对未知 code 回 502，页面仍保留一条兜底文案。`items: null` 时不提供「使用」（`creditId` 必填）。
 
 tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 403；页面会显示 email 与（仅在错误态的）本机凭据路径，这是「tailnet 可信」前提下的有意选择。
 

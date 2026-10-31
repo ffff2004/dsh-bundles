@@ -100,18 +100,16 @@ test('windowLabel switches from rounded hours to rounded days at 48 hours', () =
   assert.equal(api.windowLabel(undefined), '窗口')
 })
 
-test('resetLabel and expiryLabel use local-day-aware timestamps', () => {
+test('formatInstant keeps time-only on the same local day and names the date otherwise', () => {
   const now = new Date(2025, 10, 6, 12, 0).getTime()
   const sameDay = new Date(2025, 10, 6, 21, 27).getTime()
   const nextDay = new Date(2025, 10, 7, 9, 5).getTime()
-  assert.equal(api.resetLabel(sameDay, now), '21:27')
-  assert.equal(api.expiryLabel(sameDay, now), '21:27')
-  assert.equal(api.resetLabel(nextDay, now), '11 月 7 日 09:05')
-  assert.equal(api.expiryLabel(nextDay, now), '11 月 7 日 09:05')
-  assert.equal(api.resetLabel(nextDay, now, api.tEn, 'en'), 'Nov 7, 09:05')
+  assert.equal(api.formatInstant(sameDay, now), '21:27')
+  assert.equal(api.formatInstant(nextDay, now), '11 月 7 日 09:05')
+  assert.equal(api.formatInstant(nextDay, now, api.tEn, 'en'), 'Nov 7, 09:05')
 })
 
-test('creditDecorations picks the earliest credit and flags the seven-day horizon', () => {
+test('decorateCredits orders by expiry and picks the earliest credit plus the seven-day horizon', () => {
   const day = 24 * 60 * 60 * 1000
   const now = new Date(2025, 0, 10, 12, 0).getTime()
   const items = [
@@ -122,18 +120,27 @@ test('creditDecorations picks the earliest credit and flags the seven-day horizo
     { id: 'tie-b', expiresAt: now + 2 * day },
   ]
   const before = items.map(item => item.id)
-  const decorations = api.creditDecorations(items, now)
-  assert.equal(decorations.nearestId, 'tie-a')
-  assert.deepEqual(decorations.expiringSoonIds, ['tie-a', 'tie-b', 'boundary'])
+  const decorated = api.decorateCredits(items, now)
+  assert.deepEqual(decorated.sorted.map(item => item.id), ['tie-a', 'tie-b', 'boundary', 'later', 'undated'])
+  assert.equal(decorated.nearest.id, 'tie-a')
+  assert.deepEqual(decorated.expiringSoonIds, ['tie-a', 'tie-b', 'boundary'])
   assert.deepEqual(items.map(item => item.id), before, 'the input order is preserved')
 
-  const expired = api.creditDecorations([{ id: 'expired', expiresAt: now - 10 * day }], now)
-  assert.equal(expired.nearestId, 'expired')
+  const expired = api.decorateCredits([{ id: 'expired', expiresAt: now - 10 * day }], now)
+  assert.equal(expired.nearest.id, 'expired')
   assert.deepEqual(expired.expiringSoonIds, ['expired'])
 
-  const undated = api.creditDecorations([{ id: 'only' }], now)
-  assert.equal(undated.nearestId, undefined)
+  const undated = api.decorateCredits([{ id: 'only' }], now)
+  assert.equal(undated.nearest, undefined)
   assert.deepEqual(undated.expiringSoonIds, [])
+})
+
+test('builds the consume body from the credit the dialog opened with', () => {
+  const credit = { id: 'credit-1', title: 'Full reset' }
+  const body = api.consumePayload({ redeemRequestId: 'r1', credit })
+  assert.deepEqual(body, { redeemRequestId: 'r1', creditId: 'credit-1' })
+  assert.ok(Object.values(body).every(value => typeof value === 'string' && value.length > 0))
+  assert.equal(api.consumePayload({ redeemRequestId: 'r2', credit: { id: 'credit-2' } }).creditId, 'credit-2')
 })
 
 test('remainingPercentOf rounds and clamps the remaining percentage', () => {

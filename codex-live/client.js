@@ -449,7 +449,7 @@
    * @param locale - active locale tag, used only to choose numeric vs. month-name dates.
    * @returns "HH:mm" or "M 月 D 日 HH:mm" / "MMM D, HH:mm".
    */
-  function formatInstant(at, now, t, locale) {
+  function formatInstant(at, now, t = tZh, locale = 'zh') {
     const date = new Date(at)
     const current = new Date(now)
     const sameDay = date.getFullYear() === current.getFullYear()
@@ -463,30 +463,6 @@
       day: date.getDate(),
       time,
     })
-  }
-
-  /**
-   * The reset instant as shown beside a window.
-   * @param resetsAt - upstream reset instant in ms.
-   * @param now - current instant in ms.
-   * @param t - translator.
-   * @param locale - active locale tag.
-   * @returns the timestamp portion, without the trailing "重置".
-   */
-  function resetLabel(resetsAt, now = Date.now(), t = tZh, locale = 'zh') {
-    return formatInstant(resetsAt, now, t, locale)
-  }
-
-  /**
-   * A credit's expiry timestamp, without the surrounding "券于 … 过期" sentence.
-   * @param expiresAt - credit expiry in ms.
-   * @param now - current instant in ms.
-   * @param t - translator.
-   * @param locale - active locale tag.
-   * @returns the timestamp portion.
-   */
-  function expiryLabel(expiresAt, now = Date.now(), t = tZh, locale = 'zh') {
-    return formatInstant(expiresAt, now, t, locale)
   }
 
   /** `HH:mm:ss` for the "updated at" line. */
@@ -503,31 +479,34 @@
   }
 
   /**
-   * Copy and order credits by expiry, undated ones last. The Host already
-   * sorts, but the page tolerates a reordered response and Array#sort keeps
-   * equal timestamps in their original (first-in-list) order.
-   * @param items - the `credits.items` array.
-   * @returns a new array; the input is never mutated.
-   */
-  function sortCredits(items) {
-    return [...items].sort((left, right) => expiryOf(left) - expiryOf(right))
-  }
-
-  /**
-   * Project which credit deserves emphasis. "Nearest" is the strictly earliest
-   * dated credit (the first one on a tie); "expiring soon" is any credit whose
-   * expiry is at most seven days away, including an already-expired one.
-   * @param items - credits in any order.
+   * Order credits by expiry (undated last) and project which ones deserve
+   * emphasis. "Nearest" is the strictly earliest dated credit, the first one on a
+   * tie; "expiring soon" is any credit at most seven days away, including an
+   * already-expired one. One pass returns everything the renderer needs, so a
+   * caller never sorts, finds, then re-joins.
+   * @param items - the `credits.items` array, in any order.
    * @param now - current instant in ms.
-   * @returns the nearest id (undefined when every credit is undated) and the ids needing warn color.
+   * @returns the sorted copy (the input is never mutated), the nearest credit
+   *   (undefined when every credit is undated), and the warn-colored ids.
    */
-  function creditDecorations(items, now = Date.now()) {
-    const sorted = sortCredits(items)
+  function decorateCredits(items, now = Date.now()) {
+    const sorted = [...items].sort((left, right) => expiryOf(left) - expiryOf(right))
     const nearest = sorted.find(item => expiryOf(item) !== Number.POSITIVE_INFINITY)
     const expiringSoonIds = sorted
       .filter(item => expiryOf(item) !== Number.POSITIVE_INFINITY && expiryOf(item) - now <= EXPIRING_SOON_MS)
       .map(item => item.id)
-    return { nearestId: nearest?.id, expiringSoonIds }
+    return { sorted, nearest, expiringSoonIds }
+  }
+
+  /**
+   * The request body for one confirmation. The credit's own id is the only
+   * source: a confirmation that stored the credit but not its id used to post
+   * `creditId: undefined`, which JSON drops and the Host rejects with a 400.
+   * @param state - the open confirmation (`{ redeemRequestId, credit }`).
+   * @returns the exact body `/api/codex-live/quota/consume` validates.
+   */
+  function consumePayload(state) {
+    return { redeemRequestId: state.redeemRequestId, creditId: state.credit.id }
   }
 
   /**
@@ -686,7 +665,7 @@
             const response = await fetch(CONSUME_URL, {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ redeemRequestId: current.redeemRequestId, creditId: current.creditId }),
+              body: JSON.stringify(consumePayload(current)),
             })
             if (!response.ok) throw new Error(`codex-live: consume HTTP ${response.status}`)
             const body = await response.json()
@@ -704,12 +683,12 @@
         const ok = view?.status === 'ok' ? view : undefined
         const credits = ok?.credits
         const items = credits?.items
-        const sorted = Array.isArray(items) ? sortCredits(items) : []
-        const decorations = creditDecorations(sorted, now)
-        const nearestCredit = decorations.nearestId === undefined
-          ? undefined
-          : sorted.find(item => item.id === decorations.nearestId)
-        const expiringSoon = new Set(decorations.expiringSoonIds)
+        const decorated = Array.isArray(items)
+          ? decorateCredits(items, now)
+          : { sorted: [], nearest: undefined, expiringSoonIds: [] }
+        const sorted = decorated.sorted
+        const nearestCredit = decorated.nearest
+        const expiringSoon = new Set(decorated.expiringSoonIds)
 
         /** One retry/message block shared by the request and domain error states. */
         const notice = (lines, options = {}) => h(
@@ -755,7 +734,7 @@
             window.resetsAt !== undefined && h(
               'span',
               { className: 'dsh-codex-quota-reset' },
-              t('resetAt', { time: resetLabel(window.resetsAt, now, t, locale) }),
+              t('resetAt', { time: formatInstant(window.resetsAt, now, t, locale) }),
             ),
           )
         }
@@ -775,19 +754,13 @@
               'div',
               { className: 'dsh-codex-quota-message' },
               h('span', null, t('creditsEmpty')),
-              credits.availableCount > 0 && h(Button, {
-                variant: 'outline',
-                size: 'sm',
-                onClick: refresh,
-                disabled: busy,
-              }, t('refresh')),
             )
           }
           return h(
             'div',
             { className: 'dsh-codex-quota-credit-list' },
             sorted.map((credit) => {
-              const nearest = credit.id === decorations.nearestId
+              const nearest = credit.id === nearestCredit?.id
               const warn = expiringSoon.has(credit.id)
               return h(
                 'div',
@@ -814,7 +787,7 @@
                     },
                     credit.expiresAt === undefined
                       ? t('neverExpires')
-                      : t('expiryAt', { time: expiryLabel(credit.expiresAt, now, t, locale) }),
+                      : t('expiryAt', { time: formatInstant(credit.expiresAt, now, t, locale) }),
                   ),
                 ),
                 h(Button, {
@@ -868,9 +841,9 @@
               h('p', null, summary.length > 0 ? t('confirmBody', { windows: summary }) : t('confirmBodyGeneric')),
               credit.expiresAt !== undefined && h('p', {
                 className: expirySoon ? 'dsh-codex-quota-warn' : undefined,
-              }, t('expirySentence', { time: expiryLabel(credit.expiresAt, now, t, locale) })),
+              }, t('expirySentence', { time: formatInstant(credit.expiresAt, now, t, locale) })),
               hasEarlier && h('p', { className: 'dsh-codex-quota-warn' },
-                t('confirmEarlier', { time: expiryLabel(nearestCredit.expiresAt, now, t, locale) })),
+                t('confirmEarlier', { time: formatInstant(nearestCredit.expiresAt, now, t, locale) })),
               confirm.failed && h('p', {
                 className: 'dsh-codex-quota-error',
                 role: 'status',
@@ -1003,13 +976,12 @@
         // Extra test surface only: Cordis ignores unknown factory fields.
         __test: {
           windowLabel,
-          resetLabel,
-          expiryLabel,
-          creditDecorations,
+          formatInstant,
+          decorateCredits,
           remainingPercentOf,
           outcomeText,
+          consumePayload,
           authPathOf,
-          sortCredits,
           windowSummary,
           zh,
           en,

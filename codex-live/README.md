@@ -1,6 +1,6 @@
 # @local/dsh-codex-live
 
-一个 Host 插件 bundle：注册一条新的 LLM route（默认 `codex-live`），它的模型表跟随本机 codex CLI 的状态，而不是构建时生成的 pi-ai catalog；请求用它自己的 ChatGPT token。
+一个 bundle，两半：Host 半边注册一条新的 LLM route（默认 `codex-live`），模型表跟随本机 codex CLI 的状态，而不是构建时生成的 pi-ai catalog，请求用它自己的 ChatGPT token；浏览器半边在「设置 → Codex 额度」展示同一条 route 所用账号的额度与重置券。
 
 ## 为什么不是改 `llm-pi-ai` 配置
 
@@ -47,6 +47,36 @@
 - 日志（`codex-live:` 前缀）会逐条说明哪些模型是合成的、用了哪个模板、窗口与档位是什么，以及 token 是否临近过期。
 - 两条请求路径（`stream` / `streamSimple`）都通过 `onPayload` 在原回调执行后删除最终请求体的 `prompt_cache_key`；保留 `sessionId` 的传输层用途和原有 retention 设置，不关闭自动缓存。此策略面向仅使用 GPT-5.6+、无需按用户或会话隔离缓存核算的场景，对所有模型统一生效。[OpenAI API 文档](https://developers.openai.com/api/docs/guides/prompt-caching.md#prompt-cache-keys)说明这些模型无需 key 来优化路由；ChatGPT 后端的实际行为仍需以观测为准。
 
+## 设置页：Codex 额度
+
+浏览器半边注册 `settings.section`（`id: codex-quota`、`order: -5`，紧邻「账号与余额」），展示 `auth.json` 指向的**当前账号**：plan、email、额度窗口（按 `limit_window_seconds` 折算成小时/天）、重置券，以及手动「刷新」。`auth.*.json` 里的其它账号不在本页展示。
+
+两条自有路由挂在 `/api` 上（与其它 exact route 一样只对 owner principal 开放）：
+
+| 路由 | 行为 |
+|---|---|
+| `GET /api/codex-live/quota[?refresh=1]` | 永远 200，用 `status` 区分域结果：`ok` / `no-credential` / `token-expired` / `no-plan` / `upstream-error`。`credits.items` 三态：数组（已拉到）/ `null`（只知计数，券详情失败）/ `[]`（计数为 0，或拉到但没有可用券） |
+| `POST /api/codex-live/quota/consume` | body `{ redeemRequestId, creditId }`；200 `{ outcome, windowsReset? }`，400 非法输入，502 上游失败。`redeemRequestId` 在确认时由页面生成（UUID），重试复用 |
+
+读接口：
+
+- 先读 usage；只有 `rate_limit_reset_credits.available_count > 0` 才读券详情——计数为 0 的账号一次快照只打一次上游。
+- usage 与券详情各缓存 60s（各自单飞）；`?refresh=1` 绕过两者；consume 结束清空两者。
+- 券详情超时 4s（usage 10s）；失败、超时、解析失败都只降级为 `items: null`，额度数字照常显示。
+- `detail` 只可能是 `HTTP <status>` / `timeout` / `network`；token 与响应体永远不出 Host。
+- 凭据路径跟随 `codexHome`：默认显示 `~/.codex/auth.json`，自定义目录时显示实际路径。
+
+页面：
+
+- 打开时读一次，不轮询、不在 focus 时刷新；「刷新」强制绕过缓存，并显示 `更新于 HH:mm:ss`。
+- 百分比口径是剩余（`100 - used_percent`），进度条按已用填充；剩余 ≤10% 转 warn 色。
+- 重置时间取上游 `reset_at`（缺失时用 `reset_after_seconds` 推算）：同一本地日只显示 `HH:mm`，跨日显示 `M 月 D 日 HH:mm`。
+- 券列表按到期时间升序；严格最早的一张加粗并带视觉隐藏的「最近过期」，7 天内到期（含已过期）的到期时间用 warn 色。
+- 「使用」弹 Modal 二次确认，文案带当前各窗口的剩余百分比、券到期时间与不可撤销提示；确认的券不是最早那张时，追加「还有更早过期的券（…）」提示。
+- 四种 outcome 各有独立文案；成功后重新读取。`items: null` 时不提供「使用」（`creditId` 必填）。
+
+tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 403；页面会显示 email 与（仅在错误态的）本机凭据路径，这是「tailnet 可信」前提下的有意选择。
+
 ## 缓存复用动机与限制
 
 pi-ai 原本将请求的 `sessionId` 用作 `prompt_cache_key`，相当于按会话分组。根据上述 OpenAI API 文档，GPT-5.6+ 自动处理缓存路由，key 主要用于分开缓存核算；本部署没有这种隔离需求，因此省略 key，避免不必要的会话级分组，可能有利于跨 session 复用相同前缀。它不是缓存开关，也不会让不同内容共享 KV 状态。
@@ -55,7 +85,7 @@ pi-ai 原本将请求的 `sessionId` 用作 `prompt_cache_key`，相当于按会
 
 ## 验证
 
-在仓库根目录运行 `pnpm --filter @local/dsh-codex-live test`（或 `pnpm -r test`），验证请求体 key 删除、原回调兼容及会话/retention 设置保留；这些测试不发送真实请求。
+在仓库根目录运行 `pnpm --filter @local/dsh-codex-live test`（或 `pnpm -r test`）：Host 侧覆盖投影、错误分类、60s 缓存与单飞、券详情降级、consume 串行化与四种 outcome；浏览器侧覆盖 manifest、单条顶层语句、两侧路径常量一致，以及百分比/日期/最近过期等纯函数。全部测试不联网，也不触发真实兑换。
 
 ## 已知取舍
 

@@ -1,8 +1,11 @@
 # The live OpenAI Codex provider.
 #
-# One Host row and no Client half: the provider registers into the `llm`
-# registry, so every existing surface (the model picker, the Models settings
-# page, session model selection) already lists it — nothing new is rendered.
+# One Host row plus one browser half. The row registers into the `llm` registry,
+# so every existing surface (the model picker, the Models settings page, session
+# model selection) lists its models; the browser half adds a single settings page
+# ("Codex quota") that reads the account those models run on through two exact
+# `/api` routes this row registers. Without a Web connection the injection is
+# absent and only the routes (and that page) go away; models keep working.
 #
 # The row's `config` is the whole plugin surface; every field has a default, so
 # an empty `config` serves the codex CLI's own list-visible models under the

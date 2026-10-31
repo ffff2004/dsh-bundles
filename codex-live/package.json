@@ -3,10 +3,10 @@
   "version": "1.1.2",
   "private": true,
   "type": "module",
-  "description": "Registers a codex-live provider whose model catalog follows the local codex CLI state.",
+  "description": "Registers a codex-live provider whose model catalog follows the local codex CLI state, and serves a Codex quota settings page for the same account.",
   "meta": {
     "title": "OpenAI Codex (live)",
-    "description": "Adds a `codex-live` provider whose models follow the local codex CLI catalog (~/.codex/models_cache.json) and whose requests carry the codex CLI's own ChatGPT token (~/.codex/auth.json)."
+    "description": "Adds a `codex-live` provider whose models follow the local codex CLI catalog (~/.codex/models_cache.json) and whose requests carry the codex CLI's own ChatGPT token (~/.codex/auth.json), plus a Codex quota settings page (plan, usage windows, reset credits) backed by two `/api` routes."
   },
   "exports": {
     ".": "./index.js",

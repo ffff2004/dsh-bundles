@@ -27,13 +27,13 @@
  */
 
 /** Path suffix for the usage snapshot, below the configured ChatGPT surface. */
-const USAGE_PATH = '/wham/usage'
+const USAGE_ENDPOINT = '/wham/usage'
 
 /** Path suffix for the reset-credit list. */
-const CREDITS_PATH = '/wham/rate-limit-reset-credits'
+const CREDITS_ENDPOINT = '/wham/rate-limit-reset-credits'
 
 /** Path suffix for spending one reset credit. */
-const CONSUME_PATH = '/wham/rate-limit-reset-credits/consume'
+const CONSUME_ENDPOINT = '/wham/rate-limit-reset-credits/consume'
 
 /** Both projections share one TTL: the page reads them as one snapshot. */
 const CACHE_TTL_MS = 60_000
@@ -81,19 +81,30 @@ const OUTCOMES = new Map([
  *   the two operations the Host routes expose.
  */
 export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath }) {
-  /** Cached successful usage projection and the instant it was fetched. */
-  let usageCache
-  /** Cached successful credit list and the instant it was fetched. */
-  let creditsCache
-  /** Shared in-flight requests: every concurrent caller awaits the same one. */
-  let usageInFlight
-  let creditsInFlight
   /**
    * Bumped whenever a redemption invalidates the caches. A request that started
    * under an older epoch still resolves for its caller, but must not seed the
    * cache with data from before the reset.
    */
   let epoch = 0
+
+  /**
+   * The credential when it can talk to the ChatGPT surface, or the status that
+   * says why it cannot. One predicate keeps the read path and the redemption
+   * path from disagreeing about who counts as logged in.
+   * @returns {Promise<{ credential: object } | { status: string }>} exactly one half.
+   */
+  const usableCredential = async () => {
+    const credential = await currentCredential()
+    if (credential === undefined) return { status: 'no-credential' }
+    // Checked before any request: an expired JWT is a known fact, and asking
+    // upstream would only turn it into a 401 with less context.
+    if (credential.expiresAt !== undefined && credential.expiresAt <= now()) return { status: 'token-expired' }
+    // The account id is a mandatory header rather than a credential: without it
+    // every ChatGPT-surface request is doomed, and an API-key login carries none.
+    if (typeof credential.accountId !== 'string' || credential.accountId.length === 0) return { status: 'no-plan' }
+    return { credential }
+  }
 
   /**
    * A non-`ok` status, naming the credential file when the row knows it.
@@ -137,7 +148,7 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
   const fetchUsage = async (credential) => {
     let response
     try {
-      response = await fetchJson(endpoint(USAGE_PATH), {
+      response = await fetchJson(endpoint(USAGE_ENDPOINT), {
         method: 'GET',
         headers: headersFor(credential),
         signal: AbortSignal.timeout(USAGE_TIMEOUT_MS),
@@ -181,7 +192,7 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
   const fetchCredits = async (credential) => {
     let response
     try {
-      response = await fetchJson(endpoint(CREDITS_PATH), {
+      response = await fetchJson(endpoint(CREDITS_ENDPOINT), {
         method: 'GET',
         headers: headersFor(credential),
         signal: AbortSignal.timeout(CREDITS_TIMEOUT_MS),
@@ -199,54 +210,61 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
         - (right.expiresAt ?? Number.POSITIVE_INFINITY))
   }
 
-  /** Serve the usage projection from cache when it is still fresh. */
-  const loadUsage = (credential, refresh) => {
-    if (!refresh && usageCache !== undefined && now() - usageCache.at < CACHE_TTL_MS) {
-      return Promise.resolve(usageCache.value)
-    }
-    // Single-flight: a refresh that lands on an in-flight read shares it rather
-    // than racing another request, and every concurrent caller shares too.
-    if (usageInFlight !== undefined) return usageInFlight
-    const started = epoch
-    const pending = fetchUsage(credential).then((result) => {
-      if (result.status === 'ok' && started === epoch) {
-        usageCache = { at: result.usage.fetchedAt, value: result }
+  /**
+   * One 60s memo with single-flight. A service instance serves exactly one
+   * account, so each projection owns one slot; the redemption epoch keeps a read
+   * that started before a reset from seeding the cache with pre-reset data.
+   * @param {(credential: object) => Promise<unknown>} read - one upstream read.
+   * @param {(value: unknown) => boolean} cacheable - whether that result may be cached.
+   * @param {(value: unknown) => number} stampedAt - the instant the value became known.
+   * @returns {(credential: object, refresh: boolean) => Promise<unknown>} the cached read.
+   */
+  const memo = (read, cacheable, stampedAt) => {
+    let cache
+    let inFlight
+    /** The cached read. `clear` drops the slot; callers holding a result keep it. */
+    const load = (credential, refresh) => {
+      if (!refresh && cache !== undefined && now() - cache.at < CACHE_TTL_MS) {
+        return Promise.resolve(cache.value)
       }
-      return result
-    })
-    usageInFlight = pending
-    const settle = () => {
-      if (usageInFlight === pending) usageInFlight = undefined
+      // Single-flight: a refresh that lands on an in-flight read shares it rather
+      // than racing another request, and every concurrent caller shares too.
+      if (inFlight !== undefined) return inFlight
+      const started = epoch
+      const pending = read(credential).then((value) => {
+        if (cacheable(value) && started === epoch) cache = { at: stampedAt(value), value }
+        return value
+      })
+      inFlight = pending
+      const settle = () => {
+        if (inFlight === pending) inFlight = undefined
+      }
+      void pending.then(settle, settle)
+      return pending
     }
-    void pending.then(settle, settle)
-    return pending
+    load.clear = () => { cache = undefined }
+    return load
   }
 
-  /** Serve the credit list from cache, or resolve `undefined` when the read failed. */
-  const loadCredits = (credential, refresh) => {
-    if (!refresh && creditsCache !== undefined && now() - creditsCache.at < CACHE_TTL_MS) {
-      return Promise.resolve(creditsCache.value)
-    }
-    if (creditsInFlight !== undefined) return creditsInFlight
-    const started = epoch
-    const pending = fetchCredits(credential).then((items) => {
-      // A failure (`undefined`) is not cached: the next open retries it.
-      if (items !== undefined && started === epoch) creditsCache = { at: now(), value: items }
-      return items
-    })
-    creditsInFlight = pending
-    const settle = () => {
-      if (creditsInFlight === pending) creditsInFlight = undefined
-    }
-    void pending.then(settle, settle)
-    return pending
-  }
+  /** Usage is cached only when the read succeeded; its fetch instant stamps it. */
+  const loadUsage = memo(
+    credential => fetchUsage(credential),
+    result => result.status === 'ok',
+    result => result.usage.fetchedAt,
+  )
+
+  /** A credit failure (`undefined`) is not cached: the next open retries it. */
+  const loadCredits = memo(
+    credential => fetchCredits(credential),
+    items => items !== undefined,
+    () => now(),
+  )
 
   /** Drop both projections after a redemption changed what upstream would say. */
   const clearCaches = () => {
     epoch += 1
-    usageCache = undefined
-    creditsCache = undefined
+    loadUsage.clear()
+    loadCredits.clear()
   }
 
   /**
@@ -255,29 +273,20 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
    * @returns {Promise<object>} the frozen view documented on the factory.
    */
   const snapshot = async ({ refresh = false } = {}) => {
-    const credential = await currentCredential()
-    if (credential === undefined) return statusWithPath('no-credential')
-    // Checked before any request: an expired JWT is a known fact, and asking
-    // upstream would only turn it into a 401 with less context.
-    if (credential.expiresAt !== undefined && credential.expiresAt <= now()) return statusWithPath('token-expired')
-    if (typeof credential.accountId !== 'string' || credential.accountId.length === 0) {
-      return { status: 'no-plan' }
+    const planned = await usableCredential()
+    if (planned.status !== undefined) {
+      // Only the credential statuses name the file the user must refresh.
+      return planned.status === 'no-plan' ? planned : statusWithPath(planned.status)
     }
-    const usage = await loadUsage(credential, refresh)
+    const usage = await loadUsage(planned.credential, refresh)
     if (usage.status !== 'ok') return usage
+    const { fetchedAt, plan, email, windows, availableCount } = usage.usage
     // No credits to describe means no reason to ask for the list: an empty
     // account must cost one request, not two.
-    const items = usage.usage.availableCount === 0
+    const items = availableCount === 0
       ? []
-      : (await loadCredits(credential, refresh)) ?? null
-    return {
-      status: 'ok',
-      fetchedAt: usage.usage.fetchedAt,
-      plan: usage.usage.plan,
-      email: usage.usage.email,
-      windows: usage.usage.windows,
-      credits: { availableCount: usage.usage.availableCount, items },
-    }
+      : (await loadCredits(planned.credential, refresh)) ?? null
+    return { status: 'ok', fetchedAt, plan, email, windows, credits: { availableCount, items } }
   }
 
   /*
@@ -325,18 +334,15 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
    * queue above provides.
    */
   const postConsume = async (redeemRequestId, creditId) => {
-    const credential = await currentCredential()
-    if (credential === undefined
-      || (credential.expiresAt !== undefined && credential.expiresAt <= now())
-      || typeof credential.accountId !== 'string'
-      || credential.accountId.length === 0) {
-      throw codedError('upstream', 'codex-live: the codex credential cannot redeem reset credits')
+    const planned = await usableCredential()
+    if (planned.status !== undefined) {
+      throw codedError('upstream', `codex-live: the codex credential cannot redeem reset credits (${planned.status})`)
     }
     let response
     try {
-      response = await fetchJson(endpoint(CONSUME_PATH), {
+      response = await fetchJson(endpoint(CONSUME_ENDPOINT), {
         method: 'POST',
-        headers: { ...headersFor(credential), 'content-type': 'application/json' },
+        headers: { ...headersFor(planned.credential), 'content-type': 'application/json' },
         body: JSON.stringify({ redeem_request_id: redeemRequestId, credit_id: creditId }),
         signal: AbortSignal.timeout(CONSUME_TIMEOUT_MS),
       })

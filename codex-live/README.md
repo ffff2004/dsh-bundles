@@ -61,7 +61,7 @@
 读接口：
 
 - 先读 usage；只有 `rate_limit_reset_credits.available_count > 0` 才读券详情——计数为 0 的账号一次快照只打一次上游。
-- usage 与券详情各缓存 60s（各自单飞）；`?refresh=1` 绕过两者；consume 结束清空两者。
+- usage 与券详情各缓存 60s（各自单飞）；`?refresh=1` 绕过两者（若恰有一次读取在飞，则共享它——那份数据本来就是刚取的）；consume 结束清空两者（失败也可能改变上游状态）。
 - 券详情超时 4s（usage 10s）；失败、超时、解析失败都只降级为 `items: null`，额度数字照常显示。
 - `detail` 只可能是 `HTTP <status>` / `timeout` / `network`；token 与响应体永远不出 Host。
 - 凭据路径跟随 `codexHome`：默认显示 `~/.codex/auth.json`，自定义目录时显示实际路径。

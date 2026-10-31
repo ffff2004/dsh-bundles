@@ -2,6 +2,8 @@
 
 一个 bundle，两半：Host 半边注册一条新的 LLM route（默认 `codex-live`），模型表跟随本机 codex CLI 的状态，而不是构建时生成的 pi-ai catalog，请求用它自己的 ChatGPT token；浏览器半边在「设置 → Codex 额度」展示同一条 route 所用账号的额度与重置券。
 
+![模型选择器里的 OpenAI Codex (live) 分组](docs/model-picker.png)
+
 ## 为什么不是改 `llm-pi-ai` 配置
 
 `llm-pi-ai` 的 profile 可以新增 catalog 尚未收录的模型，但该协议的能力开关（`supportsToolSearch`、`supportsAdditionalTools`、`supportsOpenAIGrammarTools`、`supportsMidConvoSystemMessages`）在配置层是 **withhold** 的——写了会被 `assertOfferedCompatFields` 直接拒绝，因为它们只由已安装的 catalog 提供。本插件把 `Model` 对象本身交给 pi-ai，因此：
@@ -51,6 +53,8 @@
 
 浏览器半边注册 `settings.section`（`id: codex-quota`、`order: -5`，紧邻「账号与余额」），展示 `auth.json` 指向的**当前账号**：plan、email、额度窗口（按 `limit_window_seconds` 折算成小时/天）、重置券，以及手动「刷新」。`auth.*.json` 里的其它账号不在本页展示。
 
+![设置 → Codex 额度：plan 与 email、两条额度窗口（进度条按已用填充、文字按剩余）、折叠的重置券](docs/quota-page.png)
+
 两条自有路由挂在 `/api` 上（与其它 exact route 一样只对 owner principal 开放）：
 
 | 路由 | 行为 |
@@ -75,6 +79,10 @@
 - 券列表按到期时间升序；严格最早的一张加粗并带视觉隐藏的「最近过期」，7 天内到期（含已过期）的到期时间用 warn 色。
 - 「使用」弹 Modal 二次确认，文案带当前各窗口的剩余百分比、券到期时间与不可撤销提示；确认的券不是最早那张时，追加「还有更早过期的券（…）」提示。
 - 四种 outcome 各有独立文案；**任意** outcome 之后都会重新读取（券的状态可能已在上游改变，失败也可能如此）。Host 对未知 code 回 502，页面仍保留一条兜底文案。`items: null` 时不提供「使用」（`creditId` 必填）。
+
+「使用」的二次确认（剩余百分比与列表同一口径，券的到期时间同样在 7 天内转 warn 色）：
+
+![使用重置券的二次确认对话框：当前各窗口的剩余百分比、券到期时间、不可撤销](docs/reset-credit-confirm.png)
 
 tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 403；页面会显示 email 与（仅在错误态的）本机凭据路径，这是「tailnet 可信」前提下的有意选择。
 

@@ -230,17 +230,19 @@
     color: var(--dsw-alias-label-tertiary);
     font-variant-numeric: tabular-nums;
   }
+  /* One grid for every window row, so the tracks are shared: the label, the
+     remaining text, and the reset instant each size to the widest cell across
+     rows, and both progress bars land on exactly the same track. */
   .dsh-codex-quota-windows {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .dsh-codex-quota-window {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: max-content max-content minmax(72px, 1fr) max-content;
     align-items: center;
-    gap: 10px;
-    min-width: 0;
+    column-gap: 10px;
+    row-gap: 10px;
+  }
+  /* The row wrapper is grouping only; its four cells are the grid items. */
+  .dsh-codex-quota-window {
+    display: contents;
   }
   .dsh-codex-quota-window-label {
     flex: none;
@@ -256,8 +258,9 @@
     color: var(--dsw-alias-label-secondary);
   }
   .dsh-codex-quota-progress {
+    /* The flex shorthand only matters in the narrow-layout fallback below. */
     flex: 1 1 120px;
-    min-width: 100px;
+    min-width: 72px;
     height: 6px;
     overflow: hidden;
     background: var(--dsw-alias-interactive-bg-hover);
@@ -274,10 +277,27 @@
   }
   .dsh-codex-quota-reset {
     flex: none;
+    justify-self: end;
     margin-left: auto;
     font-size: 12px;
     color: var(--dsw-alias-label-tertiary);
     font-variant-numeric: tabular-nums;
+  }
+  /* Below this width the shared tracks would squeeze the bar to nothing, so the
+     rows go back to independent flex lines (and the date may wrap). */
+  @media (max-width: 560px) {
+    .dsh-codex-quota-windows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dsh-codex-quota-window {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
   }
   .dsh-codex-quota-divider {
     height: 1px;
@@ -735,10 +755,12 @@
               },
               h('span', { className: 'dsh-codex-quota-progress-fill', style: { width: `${used}%` } }),
             ),
-            window.resetsAt !== undefined && h(
+            h(
               'span',
               { className: 'dsh-codex-quota-reset' },
-              t('resetAt', { time: formatInstant(window.resetsAt, now, t, locale) }),
+              window.resetsAt === undefined
+                ? ''
+                : t('resetAt', { time: formatInstant(window.resetsAt, now, t, locale) }),
             ),
           )
         }

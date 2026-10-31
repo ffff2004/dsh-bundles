@@ -48,16 +48,15 @@ import { openAICodexResponsesApi } from '@earendil-works/pi-ai/api/openai-codex-
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import z from '@deepseek-ai/schemastery'
 
+import { AUTH_FILE, readCodexAuth } from './auth.js'
 import { withoutPromptCacheKey } from './prompt-cache.js'
+import { createQuotaService } from './quota.js'
 
 /** The pi-ai catalog route this provider mirrors; its entries are the metadata source. */
 const CATALOG_PROVIDER = 'openai-codex'
 
 /** The codex cache the model list is read from. */
 const CACHE_FILE = 'models_cache.json'
-
-/** The codex credential file the request token is read from. */
-const AUTH_FILE = 'auth.json'
 
 /** Coalescing window for filesystem events: codex rewrites the cache atomically, in bursts. */
 const WATCH_DEBOUNCE_MS = 1500
@@ -78,6 +77,12 @@ export const name = 'codex-live'
 
 /** The LLM registry this route registers into. */
 export const inject = ['llm']
+
+/** Exact Host route serving the quota snapshot; the browser half holds a copy. */
+export const QUOTA_PATH = '/api/codex-live/quota'
+
+/** Exact Host route spending one reset credit; the browser half holds a copy. */
+export const CONSUME_PATH = '/api/codex-live/quota/consume'
 
 /** Runtime schema for the row's `config`. */
 export const Config = z.object({
@@ -411,46 +416,84 @@ export function apply(ctx, config) {
       ctx.logger.info('codex-live: the token in %s expires %s', stored.path, new Date(stored.expiresAt).toISOString())
     }
   })
+
+  const quota = createQuotaService({
+    baseUrl: config.baseUrl,
+    readAuth: () => readCodexAuth(codexHome),
+    fetchJson,
+    now: Date.now,
+  })
+
+  /*
+   * `connection` is injected here rather than declared at module level: these
+   * routes are one feature of the provider, and a composition without a Web
+   * connection must keep serving the route's models. The injection also scopes
+   * route ownership, so both disappear when the connection does.
+   */
+  ctx.inject(['connection'], (scoped) => {
+    scoped.connection.fetch.register({
+      path: QUOTA_PATH,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: async (request) => {
+        const refresh = new URL(request.url).searchParams.get('refresh') === '1'
+        // Every domain outcome, including failures, is a 200 with a `status`:
+        // the page distinguishes them, and a non-2xx would reach it as a blob.
+        return jsonResponse(200, await quota.snapshot({ refresh }))
+      },
+    })
+    scoped.connection.fetch.register({
+      path: CONSUME_PATH,
+      methods: ['POST'],
+      requestBody: 'buffered',
+      fetch: async (request) => {
+        let body
+        try {
+          body = await request.json()
+        } catch {
+          return jsonResponse(400, { error: 'invalid-request' })
+        }
+        try {
+          return jsonResponse(200, await quota.consume({
+            redeemRequestId: body?.redeemRequestId,
+            creditId: body?.creditId,
+          }))
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : 'codex-live: redemption failed'
+          return error?.code === 'invalid'
+            ? jsonResponse(400, { error: 'invalid-request', detail })
+            : jsonResponse(502, { error: 'upstream-error', detail })
+        }
+      },
+    })
+  })
 }
 
 /**
- * Read the codex CLI's current credential.
- * @param codexHome - directory holding `auth.json`.
- * @returns the token with its source path and, for a JWT, its expiry; undefined when the file or a token is absent.
+ * One JSON request against the codex backend.
+ *
+ * Non-2xx responses are returned, not thrown: the quota service owns the
+ * classification, and parsing the error body here would only risk echoing it.
+ * A transport failure or a body that is not JSON rejects, which the service
+ * degrades per request.
+ *
+ * @param url - absolute endpoint.
+ * @param init - method, headers, optional JSON body, and abort signal.
+ * @returns the HTTP status and, for a 2xx, the parsed body.
  */
-async function readCodexAuth(codexHome) {
-  const path = join(codexHome, AUTH_FILE)
-  let auth
-  try {
-    auth = JSON.parse(await readFile(path, 'utf8'))
-  } catch {
-    return undefined
-  }
-  const access = auth?.tokens?.access_token
-  if (typeof access === 'string' && access.length > 0) {
-    return { token: access, path, expiresAt: jwtExpiry(access) }
-  }
-  const key = auth?.OPENAI_API_KEY
-  if (typeof key === 'string' && key.length > 0) return { token: key, path, expiresAt: undefined }
-  return undefined
+async function fetchJson(url, { method, headers, body, signal }) {
+  const response = await fetch(url, { method, headers, body, signal })
+  if (response.status < 200 || response.status >= 300) return { status: response.status, body: undefined }
+  const text = await response.text()
+  return { status: response.status, body: text.length === 0 ? undefined : JSON.parse(text) }
 }
 
-/**
- * The `exp` claim of a JWT, in milliseconds, or undefined for any other token.
- * The claim is read, never verified: the provider is the only authority on the
- * token's validity, and this exists to fail early and in the user's language.
- * @param token - the bearer token.
- * @returns the expiry instant, or undefined when the token is not a JWT or carries no `exp`.
- */
-function jwtExpiry(token) {
-  const parts = token.split('.')
-  if (parts.length !== 3) return undefined
-  try {
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
-    return typeof payload?.exp === 'number' ? payload.exp * 1000 : undefined
-  } catch {
-    return undefined
-  }
+/** A JSON response the browser half can read; these routes never cache. */
+function jsonResponse(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+  })
 }
 
 /** Codex's own ordering key; entries without one keep their place after the ordered ones. */

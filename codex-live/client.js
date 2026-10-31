@@ -449,7 +449,7 @@
    * @param locale - active locale tag, used only to choose numeric vs. month-name dates.
    * @returns "HH:mm" or "M 月 D 日 HH:mm" / "MMM D, HH:mm".
    */
-  function formatInstant(at, now, t = tZh, locale = 'zh') {
+  function formatInstant(at, now, t, locale) {
     const date = new Date(at)
     const current = new Date(now)
     const sameDay = date.getFullYear() === current.getFullYear()
@@ -482,19 +482,25 @@
    * Order credits by expiry (undated last) and project which ones deserve
    * emphasis. "Nearest" is the strictly earliest dated credit, the first one on a
    * tie; "expiring soon" is any credit at most seven days away, including an
-   * already-expired one. One pass returns everything the renderer needs, so a
-   * caller never sorts, finds, then re-joins.
-   * @param items - the `credits.items` array, in any order.
+   * already-expired one. Sorting is the only pass over the input; one walk over
+   * the sorted copy then yields everything the renderer needs, so no caller
+   * sorts, finds, and re-joins.
+   * @param items - the `credits.items` array, in any order; anything else is empty.
    * @param now - current instant in ms.
    * @returns the sorted copy (the input is never mutated), the nearest credit
    *   (undefined when every credit is undated), and the warn-colored ids.
    */
   function decorateCredits(items, now = Date.now()) {
+    if (!Array.isArray(items)) return { sorted: [], nearest: undefined, expiringSoonIds: [] }
     const sorted = [...items].sort((left, right) => expiryOf(left) - expiryOf(right))
-    const nearest = sorted.find(item => expiryOf(item) !== Number.POSITIVE_INFINITY)
-    const expiringSoonIds = sorted
-      .filter(item => expiryOf(item) !== Number.POSITIVE_INFINITY && expiryOf(item) - now <= EXPIRING_SOON_MS)
-      .map(item => item.id)
+    let nearest
+    const expiringSoonIds = []
+    for (const item of sorted) {
+      const at = expiryOf(item)
+      if (at === Number.POSITIVE_INFINITY) continue
+      nearest ??= item
+      if (at - now <= EXPIRING_SOON_MS) expiringSoonIds.push(item.id)
+    }
     return { sorted, nearest, expiringSoonIds }
   }
 
@@ -683,9 +689,7 @@
         const ok = view?.status === 'ok' ? view : undefined
         const credits = ok?.credits
         const items = credits?.items
-        const decorated = Array.isArray(items)
-          ? decorateCredits(items, now)
-          : { sorted: [], nearest: undefined, expiringSoonIds: [] }
+        const decorated = decorateCredits(items, now)
         const sorted = decorated.sorted
         const nearestCredit = decorated.nearest
         const expiringSoon = new Set(decorated.expiringSoonIds)
@@ -985,6 +989,7 @@
           windowSummary,
           zh,
           en,
+          tZh,
           tEn,
         },
       }

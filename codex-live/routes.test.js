@@ -30,15 +30,10 @@ function harness({ snapshot, consume } = {}) {
   return { routes, calls }
 }
 
-/** A request the handlers accept; `body` is sent verbatim. */
-function request(url, init) {
-  return new Request(url, init)
-}
-
 test('reads answer 200 with a JSON body and no-store, forwarding refresh', async () => {
   const { routes, calls } = harness({ snapshot: { status: 'no-credential', authPath: '~/.codex/auth.json' } })
   for (const [query, expected] of [['', false], ['?refresh=1', true], ['?refresh=0', false]]) {
-    const response = await routes.read(request(`${BASE}${query}`))
+    const response = await routes.read(new Request(`${BASE}${query}`))
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('content-type'), 'application/json')
     assert.equal(response.headers.get('cache-control'), 'no-store')
@@ -50,14 +45,14 @@ test('reads answer 200 with a JSON body and no-store, forwarding refresh', async
 
 test('reads keep a domain failure inside a 200, never as an HTTP error', async () => {
   const { routes } = harness({ snapshot: { status: 'upstream-error', detail: 'HTTP 503' } })
-  const response = await routes.read(request(BASE))
+  const response = await routes.read(new Request(BASE))
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), { status: 'upstream-error', detail: 'HTTP 503' })
 })
 
 test('consume answers 200 with the service outcome', async () => {
   const { routes, calls } = harness()
-  const response = await routes.consume(request(`${BASE}/consume`, {
+  const response = await routes.consume(new Request(`${BASE}/consume`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ redeemRequestId: 'r1', creditId: 'credit-1' }),
@@ -69,7 +64,7 @@ test('consume answers 200 with the service outcome', async () => {
 
 test('consume rejects a body that is not JSON', async () => {
   const { routes, calls } = harness()
-  const response = await routes.consume(request(`${BASE}/consume`, {
+  const response = await routes.consume(new Request(`${BASE}/consume`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: '{not json',
@@ -81,14 +76,14 @@ test('consume rejects a body that is not JSON', async () => {
 
 test('consume maps an invalid service rejection to 400 and an upstream one to 502', async () => {
   const invalid = harness({ consume: async () => { throw Object.assign(new Error('bad input'), { code: 'invalid' }) } })
-  const invalidResponse = await invalid.routes.consume(request(`${BASE}/consume`, {
+  const invalidResponse = await invalid.routes.consume(new Request(`${BASE}/consume`, {
     method: 'POST', body: JSON.stringify({ redeemRequestId: '', creditId: '' }),
   }))
   assert.equal(invalidResponse.status, 400)
   assert.deepEqual(await invalidResponse.json(), { error: 'invalid-request', detail: 'bad input' })
 
   const upstream = harness({ consume: async () => { throw Object.assign(new Error('refused'), { code: 'upstream' }) } })
-  const upstreamResponse = await upstream.routes.consume(request(`${BASE}/consume`, {
+  const upstreamResponse = await upstream.routes.consume(new Request(`${BASE}/consume`, {
     method: 'POST', body: JSON.stringify({ redeemRequestId: 'r1', creditId: 'c1' }),
   }))
   assert.equal(upstreamResponse.status, 502)

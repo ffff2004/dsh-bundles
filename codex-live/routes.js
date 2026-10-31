@@ -70,7 +70,7 @@ export function quotaRoutes(quota) {
  * @param body - JSON-serializable payload.
  * @returns the response with the headers both routes share.
  */
-export function jsonResponse(status, body) {
+function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

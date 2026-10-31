@@ -104,8 +104,8 @@ test('formatInstant keeps time-only on the same local day and names the date oth
   const now = new Date(2025, 10, 6, 12, 0).getTime()
   const sameDay = new Date(2025, 10, 6, 21, 27).getTime()
   const nextDay = new Date(2025, 10, 7, 9, 5).getTime()
-  assert.equal(api.formatInstant(sameDay, now), '21:27')
-  assert.equal(api.formatInstant(nextDay, now), '11 月 7 日 09:05')
+  assert.equal(api.formatInstant(sameDay, now, api.tZh, 'zh'), '21:27')
+  assert.equal(api.formatInstant(nextDay, now, api.tZh, 'zh'), '11 月 7 日 09:05')
   assert.equal(api.formatInstant(nextDay, now, api.tEn, 'en'), 'Nov 7, 09:05')
 })
 

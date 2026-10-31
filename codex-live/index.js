@@ -39,7 +39,7 @@
 import { watch } from 'node:fs'
 import { access, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
@@ -422,6 +422,8 @@ export function apply(ctx, config) {
     readAuth: () => readCodexAuth(codexHome),
     fetchJson,
     now: Date.now,
+    // The page prints this in its "run codex" hint, so it must follow `codexHome`.
+    authPath: displayPath(join(codexHome, AUTH_FILE)),
   })
 
   /*
@@ -486,6 +488,16 @@ async function fetchJson(url, { method, headers, body, signal }) {
   if (response.status < 200 || response.status >= 300) return { status: response.status, body: undefined }
   const text = await response.text()
   return { status: response.status, body: text.length === 0 ? undefined : JSON.parse(text) }
+}
+
+/**
+ * Shorten a credential path under the user's home to `~/…` for display.
+ * @param path - absolute path to the codex credential file.
+ * @returns the display form, unchanged when it is outside the home directory.
+ */
+function displayPath(path) {
+  const home = homedir()
+  return path.startsWith(home + sep) ? `~${path.slice(home.length)}` : path
 }
 
 /** A JSON response the browser half can read; these routes never cache. */

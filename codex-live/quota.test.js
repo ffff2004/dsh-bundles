@@ -52,7 +52,7 @@ function usage(overrides = {}) {
  *   throwing simulates a transport failure.
  * @returns {{ service: object, calls: { url: string, init: object }[] }} the service and its wire log.
  */
-function harness({ auth = CREDENTIAL, usage: usageBody, credits, now = () => NOW, baseUrl = BASE_URL, respond } = {}) {
+function harness({ auth = CREDENTIAL, usage: usageBody, credits, now = () => NOW, baseUrl = BASE_URL, respond, authPath } = {}) {
   const calls = []
   const fetchJson = async (url, init) => {
     calls.push({ url, init })
@@ -70,6 +70,7 @@ function harness({ auth = CREDENTIAL, usage: usageBody, credits, now = () => NOW
     fetchJson,
     now,
     baseUrl,
+    ...(authPath === undefined ? {} : { authPath }),
   })
   return { service, calls }
 }
@@ -394,4 +395,23 @@ test('tolerates a baseUrl with a trailing slash', async () => {
   await service.snapshot()
 
   assert.deepEqual(calls.map(call => call.url), [USAGE_URL])
+})
+
+test('names the configured credential path in credential statuses', async () => {
+  const missing = harness({ auth: null, authPath: '~/.codex/auth.json' })
+  assert.deepEqual(await missing.service.snapshot(), { status: 'no-credential', authPath: '~/.codex/auth.json' })
+
+  const expired = harness({ auth: { ...CREDENTIAL, expiresAt: NOW - 1 }, authPath: '/srv/codex/auth.json' })
+  assert.deepEqual(await expired.service.snapshot(), { status: 'token-expired', authPath: '/srv/codex/auth.json' })
+
+  // A 401 names the same file the page's hint would: the credential was read.
+  const rejected = harness({
+    authPath: '/srv/codex/auth.json',
+    respond: url => (url === USAGE_URL ? { status: 401, body: undefined } : undefined),
+  })
+  assert.deepEqual(await rejected.service.snapshot(), { status: 'token-expired', authPath: '/srv/codex/auth.json' })
+
+  // Without the option, the status stays path-free and the page keeps its fallback.
+  const bare = harness({ auth: null })
+  assert.deepEqual(await bare.service.snapshot(), { status: 'no-credential' })
 })

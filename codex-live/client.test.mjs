@@ -187,3 +187,10 @@ test('apply registers the codex-quota section and both dictionaries', () => {
   assert.equal(registration.options.label(), 'nav')
   assert.equal(typeof registration.component, 'function')
 })
+
+test('names the Host-reported credential path, falling back to the default home', () => {
+  assert.equal(api.authPathOf({ status: 'no-credential' }), '~/.codex/auth.json')
+  assert.equal(api.authPathOf({ status: 'no-credential', authPath: '' }), '~/.codex/auth.json')
+  assert.equal(api.authPathOf({ status: 'token-expired', authPath: '/srv/codex/auth.json' }), '/srv/codex/auth.json')
+  assert.equal(api.authPathOf(undefined), '~/.codex/auth.json')
+})

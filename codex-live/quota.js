@@ -80,7 +80,7 @@ const OUTCOMES = new Map([
  * @returns {{ snapshot: (options?: { refresh?: boolean }) => Promise<object>, consume: (input: { redeemRequestId: string, creditId: string }) => Promise<{ outcome: string, windowsReset?: number }> }}
  *   the two operations the Host routes expose.
  */
-export function createQuotaService({ readAuth, fetchJson, now, baseUrl }) {
+export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath }) {
   /** Cached successful usage projection and the instant it was fetched. */
   let usageCache
   /** Cached successful credit list and the instant it was fetched. */
@@ -94,6 +94,13 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl }) {
    * cache with data from before the reset.
    */
   let epoch = 0
+
+  /**
+   * A non-`ok` status, naming the credential file when the row knows it.
+   * `codexHome` is configurable, so the page must not keep guessing a path that
+   * its own login hint would then contradict.
+   */
+  const statusWithPath = status => (typeof authPath === 'string' && authPath.length > 0 ? { status, authPath } : { status })
 
   /** Keep `path` on the configured surface without doubling a trailing slash. */
   const endpoint = path => `${baseUrl.replace(/\/+$/, '')}${path}`
@@ -138,7 +145,7 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl }) {
     } catch (error) {
       return { status: 'upstream-error', detail: failureDetail(error) }
     }
-    if (response.status === 401) return { status: 'token-expired' }
+    if (response.status === 401) return statusWithPath('token-expired')
     if (response.status < 200 || response.status >= 300) {
       return { status: 'upstream-error', detail: `HTTP ${response.status}` }
     }
@@ -249,10 +256,10 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl }) {
    */
   const snapshot = async ({ refresh = false } = {}) => {
     const credential = await currentCredential()
-    if (credential === undefined) return { status: 'no-credential' }
+    if (credential === undefined) return statusWithPath('no-credential')
     // Checked before any request: an expired JWT is a known fact, and asking
     // upstream would only turn it into a 401 with less context.
-    if (credential.expiresAt !== undefined && credential.expiresAt <= now()) return { status: 'token-expired' }
+    if (credential.expiresAt !== undefined && credential.expiresAt <= now()) return statusWithPath('token-expired')
     if (typeof credential.accountId !== 'string' || credential.accountId.length === 0) {
       return { status: 'no-plan' }
     }

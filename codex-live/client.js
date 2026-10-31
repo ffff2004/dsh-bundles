@@ -30,8 +30,18 @@
   const QUOTA_URL = 'api/codex-live/quota'
   const CONSUME_URL = 'api/codex-live/quota/consume'
 
-  /** The file the codex CLI writes; shown only when the credential is unusable. */
+  /**
+   * The credential path this page names when the Host does not report one. The
+   * Host sends `authPath` because `codexHome` is configurable: the default reads
+   * `~/.codex/auth.json`, a custom one does not, and a wrong path is worse than
+   * none in the one message meant to help someone fix their login.
+   */
   const AUTH_PATH = '~/.codex/auth.json'
+
+  /** The credential path a status should name, falling back to the default home. */
+  function authPathOf(view) {
+    return typeof view?.authPath === 'string' && view.authPath.length > 0 ? view.authPath : AUTH_PATH
+  }
 
   /** Percentages at or below this remain readable but turn warning-colored. */
   const LOW_REMAINING_PERCENT = 10
@@ -707,7 +717,8 @@
           { className: 'dsh-codex-quota-message', role: 'status', 'aria-live': 'polite' },
           ...lines.map((line, index) => h('span', { key: String(index) }, line)),
           options.detail !== undefined && h('span', { className: 'dsh-codex-quota-detail' }, options.detail),
-          options.path === true && h('span', { className: 'dsh-codex-quota-path' }, t('credentialFile', { path: AUTH_PATH })),
+          typeof options.path === 'string'
+            && h('span', { className: 'dsh-codex-quota-path' }, t('credentialFile', { path: options.path })),
           options.codexHint === true && h('span', null, t('runCodex')),
           options.retry !== false && h(Button, {
             variant: 'outline',
@@ -874,10 +885,10 @@
           if (requestFailed) return notice([t('requestFailed')])
           if (view === undefined) return notice([t('loading')], { retry: false })
           if (view.status === 'no-credential') {
-            return notice([t('noCredential')], { path: true, codexHint: true })
+            return notice([t('noCredential')], { path: authPathOf(view), codexHint: true })
           }
           if (view.status === 'token-expired') {
-            return notice([t('tokenExpired')], { path: true, codexHint: true })
+            return notice([t('tokenExpired')], { path: authPathOf(view), codexHint: true })
           }
           if (view.status === 'no-plan') return notice([t('noPlan')])
           if (view.status === 'upstream-error') {
@@ -997,6 +1008,7 @@
           creditDecorations,
           remainingPercentOf,
           outcomeText,
+          authPathOf,
           sortCredits,
           windowSummary,
           zh,

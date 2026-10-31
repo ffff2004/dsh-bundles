@@ -9,11 +9,16 @@
     "description": "Adds a `codex-live` provider whose models follow the local codex CLI catalog (~/.codex/models_cache.json) and whose requests carry the codex CLI's own ChatGPT token (~/.codex/auth.json)."
   },
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./client": "./client.js"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": ["@deepseek-ai/dsh-client-ui-settings-general"]
     }
   },
   "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },

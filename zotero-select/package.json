@@ -1,0 +1,30 @@
+{
+  "name": "@local/dsh-zotero-select",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Extract Zotero select Markdown links into a per-reply literature menu and guide citation formatting.",
+  "engines": { "dsh": ">=0.2.1-rc.3 <0.3.0-0" },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "client.js", "src/", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
+  "scripts": { "test": "node --test" },
+  "dependencies": { "mdast-util-from-markdown": "2.1.0", "zod": "4.6.7" },
+  "devDependencies": {
+    "react": "18.3.1",
+    "react-test-renderer": "18.3.1",
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.3"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": ["@deepseek-ai/dsh-client-ui-chat"]
+    }
+  }
+}

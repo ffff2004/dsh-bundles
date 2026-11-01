@@ -14,6 +14,7 @@
 | [preview-path](<preview-path/README.md>) | 把文档预览和文件树的路径行变成可编辑输入框，新增可多开的目录页；输入路径、点击条目或返回父目录均默认在来源标签位置导航，不跳转到其他已打开的页。 |
 | [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`；超时终止时不添加，不修改默认超时或工具参数。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
+| [zotero-select](<zotero-select/README.md>) | 提取回复中的 Zotero select Markdown 链接，在已完成回复下提供折叠文献列表，并添加英文引用格式指引。 |
 
 具体配置及重启要求以各 bundle 的 README 为准；各自 manifest 是加载范围与开发测试版本的唯一来源。工具验证依赖语义关系，不固定 DSH 发布基线；范围是否合理由 manifest diff/review 判断，合法声明与测试通过不代表未来版本的运行时兼容保证。详情见[兼容与依赖策略](<dependency-policy.md>)。
 

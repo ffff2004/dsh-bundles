@@ -1,0 +1,4 @@
+- insert:
+    - id: zotero-select
+      name: '@local/dsh-zotero-select'
+      config: {}

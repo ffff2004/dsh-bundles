@@ -125,7 +125,7 @@
   }
 
   window.__ModuleLoader__.load({
-    id: '@local/dsh-preview-download',
+    id: '@ffff2004-dsh-bundles/preview-download',
     factory(require) {
       const React = require('react')
       const h = React.createElement

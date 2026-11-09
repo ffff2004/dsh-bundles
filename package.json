@@ -5,9 +5,13 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "lint": "syncpack lint && eslint . && node scripts/check-dependencies.mjs",
-    "test:lint": "node --test scripts/dependencies.test.mjs"
+    "test:lint": "node --test scripts/dependencies.test.mjs",
+    "test:release": "node --test scripts/release.test.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.3",
     "eslint": "10.13.0",
     "eslint-import-resolver-node": "0.4.0",
     "eslint-plugin-import-x": "4.17.1",

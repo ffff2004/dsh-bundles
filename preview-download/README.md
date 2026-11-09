@@ -37,7 +37,7 @@ manager.
 
 ## Tests
 
-From the repository root, run `pnpm --filter @local/dsh-preview-download test`.
+From the repository root, run `pnpm --filter @ffff2004-dsh-bundles/preview-download test`.
 The bundle uses `node --test`, like every other bundle. The route tests preserve
 all 17 original check labels across four explicit scenario groups, using a real
 temporary file and cleaning it in `finally`; they do not send live requests.
@@ -46,7 +46,7 @@ Test locations and dependency checks follow the [repository policy](<../dependen
 ## Install and remove
 
 Installed through the Plugin Manager (`install_bundle` with this directory). To
-undo, `remove_bundle @local/dsh-preview-download` and restart the profile.
+undo, `remove_bundle @ffff2004-dsh-bundles/preview-download` and restart the profile.
 
 ## Known limitations
 

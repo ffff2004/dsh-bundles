@@ -1,4 +1,4 @@
 - insert:
     - id: zotero-select
-      name: '@local/dsh-zotero-select'
+      name: '@ffff2004-dsh-bundles/zotero-select'
       config: {}

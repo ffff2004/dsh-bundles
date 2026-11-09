@@ -15,7 +15,7 @@ export const sharedPackages = new Set([
 ])
 export const ownedPackages = new Set(['@deepseek-ai/schemastery'])
 export const unusedPeerContracts = {
-  '@local/dsh-codex-live': {
+  '@ffff2004-dsh-bundles/codex-live': {
     '@deepseek-ai/cordis': 'The host supplies the Cordis ctx passed to apply(); no direct import is needed.',
   },
 }

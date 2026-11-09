@@ -182,13 +182,13 @@ test('shared runtime modules used only by tests remain dev-only', t => {
 
 test('cordis ctx contract is scoped to codex-live, exact 4.0.5 is not DSH 0.x', t => {
   const pkg = base()
-  pkg.name = '@local/dsh-codex-live'
+  pkg.name = '@ffff2004-dsh-bundles/codex-live'
   pkg.peerDependencies['@deepseek-ai/cordis'] = '4.0.5'
   pkg.devDependencies['@deepseek-ai/cordis'] = '4.0.5'
   passes(fixture(t, [pkg]), 'policy')
   pkg.name = '@local/not-codex-live'
   rejects(fixture(t, [pkg]), 'policy', /cordis: unused peer/u)
-  pkg.name = '@local/dsh-codex-live'
+  pkg.name = '@ffff2004-dsh-bundles/codex-live'
   delete pkg.peerDependencies['@deepseek-ai/cordis']
   rejects(fixture(t, [pkg]), 'policy', /stale unused-peer host contract/u)
 })

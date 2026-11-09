@@ -8,8 +8,8 @@
 
 | Plugin | 条目 ID | 模块名 | 作用 |
 | --- | --- | --- | --- |
-| Jobs 等待指引 | `background-wait-jobs` | `@local/dsh-background-wait-guidance/jobs` | 建议告知用户等待哪些 jobs 后结束 turn，等待完成通知。 |
-| 子代理等待指引 | `background-wait-subagents` | `@local/dsh-background-wait-guidance/subagents` | 建议告知用户等待哪些子代理后结束 turn，等待完成或消息通知。 |
+| Jobs 等待指引 | `background-wait-jobs` | `@ffff2004-dsh-bundles/background-wait-guidance/jobs` | 建议告知用户等待哪些 jobs 后结束 turn，等待完成通知。 |
+| 子代理等待指引 | `background-wait-subagents` | `@ffff2004-dsh-bundles/background-wait-guidance/subagents` | 建议告知用户等待哪些子代理后结束 turn，等待完成或消息通知。 |
 
 两个插件默认均启用，无配置项；也可禁用整个 bundle。禁用任一插件只移除其提示，不影响另一个插件，不改变工具执行或通知策略，也不会强制模型阻塞等待。
 
@@ -41,7 +41,7 @@
 ```bash
 # 在仓库根目录
 pnpm install
-pnpm --filter @local/dsh-background-wait-guidance test
+pnpm --filter @ffff2004-dsh-bundles/background-wait-guidance test
 ```
 
 也可以直接运行 `pnpm -r test` 执行全部 bundle 的测试。

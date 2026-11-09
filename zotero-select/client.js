@@ -1,6 +1,6 @@
 ;(function () {
   window.__ModuleLoader__.load({
-    id: '@local/dsh-zotero-select',
+    id: '@ffff2004-dsh-bundles/zotero-select',
     factory(require) {
       const React = require('react')
       const h = React.createElement

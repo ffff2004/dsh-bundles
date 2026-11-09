@@ -61,7 +61,7 @@ test('manifest declares the browser half and the settings-shell dependency', () 
   assert.equal(packageJson.dsh.client.platform, 'web')
   assert.ok(packageJson.dsh.client.inject.includes('@deepseek-ai/dsh-client-ui-settings-general'))
   assert.deepEqual(packageJson.dsh.bundle, { patch: './cordis.patch.yml' })
-  assert.equal(registered.id, '@local/dsh-codex-live')
+  assert.equal(registered.id, '@ffff2004-dsh-bundles/codex-live')
   assert.deepEqual(factory.inject, ['slots', 'locale'])
 })
 

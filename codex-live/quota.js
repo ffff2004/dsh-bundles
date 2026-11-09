@@ -23,7 +23,7 @@
  * calls. A failed credit read is deliberately not cached: the next open is the
  * natural retry, while the usage result that carried `availableCount` is.
  *
- * @module @local/dsh-codex-live/quota
+ * @module @ffff2004-dsh-bundles/codex-live/quota
  */
 
 /** Path suffix for the usage snapshot, below the configured ChatGPT surface. */

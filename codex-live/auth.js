@@ -7,7 +7,7 @@
  * and one `exp` interpretation, so a token the provider would reject cannot
  * look fresh to the settings page.
  *
- * @module @local/dsh-codex-live/auth
+ * @module @ffff2004-dsh-bundles/codex-live/auth
  */
 
 import { readFile } from 'node:fs/promises'

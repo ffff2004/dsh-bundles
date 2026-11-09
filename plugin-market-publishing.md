@@ -7,6 +7,14 @@ CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 U
 
 根 [工具 manifest](<package.json>) 只承载精确固定的开发工具，不声明 `dsh.bundle`；市场继续通过 [workspace globs](<pnpm-workspace.yaml>) 发现 bundle 子目录，根工具不会变成市场包。lint 同时拒绝未被 workspace 覆盖的 bundle，避免新增目录绕过本地检查。兼容范围、共享实例分类与静态检查边界见[依赖策略](<dependency-policy.md>)。
 
+## Namespace 与 Changesets 迁移
+
+九包改用 `@ffff2004-dsh-bundles/<name>`；这是新安装身份，先卸载历史 `@local/dsh-<name>` 再安装新包，目录和 patch 行稳定 ID 不变。未来新市场不保留旧 `@local` 条目，旧 Git tags 不删除、不补打。
+
+根工具精确固定 `@changesets/cli` **3.0.3**（实际 registry：`https://registry.npmmirror.com/`）；CLI 要求 Node `^22.11 || ^24 || >=26`、pnpm `>=10.0.0`（npm `>=10.9.0` / Yarn `>=4.5.2`）。仓库 CI 的 Node 24 与 pnpm 11.25.0 匹配；本地验证使用 Node 26.10.0。
+
+用 `pnpm changeset` 记录变化，`pnpm changeset status` 只读查看计划；`pnpm version-packages` 留给未来 Release PR 更新版本与 changelog，本次迁移不提前执行。各包独立 SemVer，沿用既有版本线；九包 namespace 迁移记 patch，codex-live 额度页与缓存修复另记 minor（1.1.2 → 1.2.0）。私有包参与版本计算但不由 Changesets 打 tag；配置 restricted，不做 npm 发布。以下仍为现行市场机制，Release PR 与批量发布编排后续单独更新。
+
 ## 首次启用
 
 1. 将本次配置推送到 GitHub 的 `main` 分支。
@@ -15,7 +23,7 @@ CI 根据 `GITHUB_SERVER_URL` 和 `GITHUB_REPOSITORY` 自动取得当前仓库 U
 4. 若 `github-pages` environment 有分支限制，允许 `main` 以及用于发布的 tags；有审批规则时需完成审批。
 5. 确认工作流部署成功，打开 [README](<README.md>) 中的市场索引 URL，应直接得到 JSON（HTTP 200，不能重定向）；随后在 DSH 添加索引源。
 
-自动发布仅由 `<完整包名>@<version>` 格式的 tag 推送触发，例如 `@local/dsh-shell-timeout-guidance@1.2.0`。
+自动发布仅由 `<完整包名>@<version>` 格式的 tag 推送触发，例如 `@ffff2004-dsh-bundles/shell-timeout-guidance@1.2.0`。
 工作流先匹配含 `@` 的 tag，再确认生成索引确实收录了对应包、版本及该 tag 的 commit；不匹配则失败，不部署。
 一次 push 超过三个 tag 时 GitHub 不产生 push 事件，工作流不会运行；批量发布应逐个推送，或每次最多三个。
 普通 `main` 推送不触发工作流；仍可手动运行，并仅允许在 `main` 或 tag 上部署。
@@ -28,8 +36,8 @@ Pull request 只生成和校验 artifact，不部署。
   包名必须等于该 bundle 的 `package.json` 中的 `name`，版本必须等于其中的 `version`（精确 SemVer）。
   例如发布 `shell-timeout-guidance` 的 `1.2.0`：
   ```bash
-  git tag '@local/dsh-shell-timeout-guidance@1.2.0' <release-commit>
-  git push origin 'refs/tags/@local/dsh-shell-timeout-guidance@1.2.0'
+  git tag '@ffff2004-dsh-bundles/shell-timeout-guidance@1.2.0' <release-commit>
+  git push origin 'refs/tags/@ffff2004-dsh-bundles/shell-timeout-guidance@1.2.0'
   ```
 - 生成器也识别统一 `vX.Y.Z` / `X.Y.Z` tag，但本工作流不会因这类 tag 自动发布；手动生成时仍会收录它们。
 - 索引收录范围沿用原生生成器：默认分支上各包的当前版本也会被收录；同一个版本已有 tag 时，tag 优先。

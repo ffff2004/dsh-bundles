@@ -1,7 +1,7 @@
 - insert:
     - id: background-wait-jobs
-      name: '@local/dsh-background-wait-guidance/jobs'
+      name: '@ffff2004-dsh-bundles/background-wait-guidance/jobs'
       config: {}
     - id: background-wait-subagents
-      name: '@local/dsh-background-wait-guidance/subagents'
+      name: '@ffff2004-dsh-bundles/background-wait-guidance/subagents'
       config: {}

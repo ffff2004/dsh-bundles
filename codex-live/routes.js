@@ -10,7 +10,7 @@
  * the service decides *what* the account looks like, this module decides how a
  * browser sees it.
  *
- * @module @local/dsh-codex-live/routes
+ * @module @ffff2004-dsh-bundles/codex-live/routes
  */
 
 /**

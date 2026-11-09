@@ -3,4 +3,4 @@
 # `dsh.client` declaration and rendered in the Web page.
 - insert:
     - id: preview-path
-      name: '@local/dsh-preview-path'
+      name: '@ffff2004-dsh-bundles/preview-path'

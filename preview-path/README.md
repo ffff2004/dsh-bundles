@@ -81,7 +81,7 @@ whether the path is a directory.
 
 ## Tests
 
-From the repository root, run `pnpm --filter @local/dsh-preview-path test`.
+From the repository root, run `pnpm --filter @ffff2004-dsh-bundles/preview-path test`.
 The bundle uses `node --test`, like every other bundle, discovering both test
 files with default per-file isolation. The contract tests preserve all 62
 original check labels across 11 explicit scenario groups and restore their
@@ -95,7 +95,7 @@ Install through the Plugin Manager (`install_bundle` with this directory), then
 reload the page once: the Host composes the new client entry into its graph, but
 a page that was already open did not pick it up until reloaded. Later edits to
 `client.js` are picked up by the bundle watcher without a reload. To undo,
-`remove_bundle @local/dsh-preview-path`.
+`remove_bundle @ffff2004-dsh-bundles/preview-path`.
 
 ## Known limitations
 

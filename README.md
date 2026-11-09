@@ -56,9 +56,13 @@ dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HE
 
 本仓库包含多个 bundle，必须通过 `path:/子目录` 指定要安装的那个，不能直接安装仓库根目录。`HEAD` 跟随仓库默认分支；如需固定版本，可替换为 tag 或 commit。
 
+## 包名迁移
+
+九个 bundle 使用 `@ffff2004-dsh-bundles/<name>`，叶子名不带 `dsh-`，目录不变（例如目录 `dsh-shell-description` 的包名为 `@ffff2004-dsh-bundles/shell-description`）。从历史 `@local/dsh-<name>` 升级时，先在 Plugin Manager 卸载旧 bundle，再安装新身份；按安装结果重启或刷新。新市场不保留旧 `@local` 条目；旧 Git tags 不删除、不补打。
+
 ## 本地开发
 
-安装与统一 gates 见 [AGENTS.md](<AGENTS.md>)；`pnpm lint` 是独立只读检查，`pnpm test:lint` 验证检查器正反例，`pnpm -r test` 保留各 bundle 行为测试。
+安装与统一 gates 见 [AGENTS.md](<AGENTS.md>)；`pnpm lint` 是独立只读检查，`pnpm test:lint` 验证检查器正反例，`pnpm -r test` 保留各 bundle 行为测试；`pnpm test:release` 检查 namespace、自引用与 Changesets 版本计划（初始 changesets 被 Release PR 消费后跳过初始计划断言）。
 
 ## 发布维护
 

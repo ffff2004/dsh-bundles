@@ -11,8 +11,8 @@
 # an empty `config` serves the codex CLI's own list-visible models under the
 # route key `codex-live`. Read index.js for what each field does, or run
 # `cordis_inspect_query` with `Config.listConfigs` and `name:
-# "@local/dsh-codex-live"` for the live JSON Schema.
+# "@ffff2004-dsh-bundles/codex-live"` for the live JSON Schema.
 - insert:
     - id: codex-live
-      name: '@local/dsh-codex-live'
+      name: '@ffff2004-dsh-bundles/codex-live'
       config: {}

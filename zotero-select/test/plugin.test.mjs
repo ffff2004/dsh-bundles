@@ -85,7 +85,7 @@ async function clientFixture() {
   // Same combo can be evaluated twice without top-level binding collisions.
   const context = vm.createContext({ window: { __ModuleLoader__: { load(value) { registration = value } } } })
   vm.runInContext(source + ';\n' + source, context)
-  assert.equal(registration.id, '@local/dsh-zotero-select')
+  assert.equal(registration.id, '@ffff2004-dsh-bundles/zotero-select')
   const client = registration.factory(name => { assert.equal(name, 'react'); return React })
   let entry, Component, disposeCallback
   const locales = []

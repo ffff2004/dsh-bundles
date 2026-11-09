@@ -15,7 +15,7 @@
  * configured `maxBytes`, so no chunk size here can exceed its cap and the whole
  * file is never held in memory.
  *
- * @module @local/dsh-preview-download
+ * @module @ffff2004-dsh-bundles/preview-download
  */
 
 /** Absolute pathname the Host registers; `GET` and `HEAD` both answer it. */

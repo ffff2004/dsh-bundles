@@ -39,9 +39,8 @@ Pull request 只生成和校验 artifact，不部署。
   git tag '@ffff2004-dsh-bundles/shell-timeout-guidance@1.2.0' <release-commit>
   git push origin 'refs/tags/@ffff2004-dsh-bundles/shell-timeout-guidance@1.2.0'
   ```
-- 生成器也识别统一 `vX.Y.Z` / `X.Y.Z` tag，但本工作流不会因这类 tag 自动发布；手动生成时仍会收录它们。
-- 索引收录范围沿用原生生成器：默认分支上各包的当前版本也会被收录；同一个版本已有 tag 时，tag 优先。
-  限制发布触发条件不等于“仅收录已打 tag 的版本”，给一个包打 tag 也可能同时更新其他包的默认分支版本。
+- 本仓库[生成入口](<scripts/market.mjs>)强制仅收录当前九个 `@ffff2004-dsh-bundles/<name>` 身份的包专用精确 SemVer tags，排除统一 `vX.Y.Z` / `X.Y.Z`、未打 tag 的 main 版本和旧 `@local` 身份；不保留旧条目、不补旧 tags 或映射。`private: true` 仅禁止 npm 发布，不禁止市场收录。
+- 仍从默认分支发现当前包目录，tag 上 manifest 的 name/version 必须精确匹配，输出固定到该 tag peeled commit；因此新增/改名目录须先进入默认分支。
 - 生成器读取的是远端 refs，不是本地工作树；未推送的修改不会进入索引。
   PR 校验因此只验证生成流程，不保证尚未合并的 bundle 修改可被正确收录。
 - 生成器已做索引格式校验；任一源读取失败（非零退出码）或最终索引为空时，工作流失败，不部署，保留线上上次成功版本。
@@ -51,24 +50,32 @@ Pull request 只生成和校验 artifact，不部署。
 
 ## 本地生成
 
-需有 DSH 源码 checkout，并按其开发说明安装生成器依赖；本地示例还使用 GitHub CLI（`gh`）从 Git remote 识别仓库。
-设置实际路径，在本仓库执行；临时清单在命令结束时清理：
+准备单独的 DSH checkout（不要把已有新版 checkout 降级），固定在 **687f282e8625c6b8d11ff58211a90524be2e4317**；CI 可继续用 checkout action 的 `ref`。进入该 checkout，使用其 packageManager 安装依赖：
 
 ```bash
-(
-  set -e
-  DSH_SOURCE="$HOME/repos/deepseek-harness"
-  BUNDLE_ROOT="$PWD"
-  SOURCE_LIST="$(mktemp)"
-  trap 'rm -f -- "$SOURCE_LIST"' EXIT
-  gh repo view --json url --jq .url > "$SOURCE_LIST"
-  pnpm --dir "$DSH_SOURCE" --filter @deepseek-ai/dsh-plugin-market-generator start \
-    --input "$SOURCE_LIST" \
-    --output "$BUNDLE_ROOT/_site/index.json" \
-    --cache "$BUNDLE_ROOT/.plugin-market-cache" \
-    --title 'ffff2004 DSH Bundles' \
-    --description 'Personal DeepSeek Harness bundles by ffff2004'
-)
+pnpm --filter '@deepseek-ai/dsh-plugin-market-generator...' install --frozen-lockfile --ignore-scripts
 ```
+
+在本仓库执行（参数均为显式路径，不依赖用户的本地上游目录）：
+
+```bash
+pnpm install --frozen-lockfile
+pnpm test:market
+pnpm test:market:integration --upstream /absolute/path/to/pinned-dsh
+printf '%s\n' 'https://github.com/ffff2004/dsh-bundles' > /tmp/bundle-sources.txt
+pnpm market:generate --upstream /absolute/path/to/pinned-dsh \
+  --input /tmp/bundle-sources.txt --output _site/index.json --cache .plugin-market-cache
+# 独立重验同一输出（同样需要读取远端 refs）：
+pnpm market:validate --upstream /absolute/path/to/pinned-dsh \
+  --input /tmp/bundle-sources.txt --output _site/index.json --cache .plugin-market-cache
+```
+
+生成和校验可加 `--release-tag '<完整包名>@<version>' --release-commit '<peeled commit>'` 检查触发版本。默认拒绝空市场；新 namespace 首次发布前，**非部署** PR 校验可显式加 `--allow-empty`，部署不得传入。读取源失败即非零退出，即使存在 fallback 也不可部署。
+
+[补丁](<scripts/patches/market-package-tags-only.patch>)仅修改固定版本的 CLI 与 GenerateOptions：`--package-tags-only <逗号分隔完整包名>` / `packageTagsOnly?: readonly string[]`，未提供时维持上游默认行为。[准备器](<scripts/market-source.mjs>)核实 HEAD 和相关 tracked 源码/锁文件无漂移，以 `git archive` 导出固定 revision，在独立临时目录 `git apply --check` 后应用；原 checkout 不修改，依赖复用其安装，shared format-1 validator 从固定源码加载，不要求 build。
+
+缓存：保持上游 `CACHE_VERSION=7`，但 strict 正常结果及 last-success key 均加入 `package-tags-only-v1` 和排序去重 allowlist；不可复用旧模式结果。不可变的 commit/path manifest、display 缓存仍可安全共享。入口再强制写入 `<cache>/package-tags-only-v1`；CI cache key/restore-prefix 应包含该策略、上游 SHA 和补丁 hash，不能退回无策略的 restore-prefix。
+
+真实 fixture gate 完全离线：核心测试仅允许 file transport；生产 CLI/校验 worker 测试用本地 upload-pack 脚本替代 SSH，无网络客户端。覆盖 named/annotated tags、精确 prerelease/build metadata、private 可见、未 tag main/统一 tags/旧身份/manifest 不匹配排除、同版本 commit、旧模式→strict 缓存和失败 fallback，以及原 validator/图标；缺上游参数或依赖时硬失败，**CI 必须显式运行，不得只跑静态 gate**。入口会清理自己的已验证临时目录，不 checkout/fetch/改动提供的上游源码。
 
 `_site/`、`.plugin-market-cache/` 与 CI 使用的 `.dsh-source/` 均已忽略；不要将仓库根目录或缓存目录作为 Pages artifact 发布。

@@ -1,0 +1,102 @@
+diff --git a/apps/plugin-market-generator/src/cli.ts b/apps/plugin-market-generator/src/cli.ts
+index b288716414..bd77e89fe7 100644
+--- a/apps/plugin-market-generator/src/cli.ts
++++ b/apps/plugin-market-generator/src/cli.ts
+@@ -30,6 +30,7 @@ interface Options {
+   readonly inlineIconBytes: number
+   readonly concurrency: number
+   readonly timeoutMs: number
++  readonly packageTagsOnly?: string
+ }
+
+ /** A positive integer option value, at most `max` when one is given. */
+@@ -52,6 +53,7 @@ function program(): Command {
+     .option('--description <text>', 'market description')
+     .option('--cache <dir>', 'cache directory (default: .plugin-market-cache beside the input list)')
+     .option('--registry <url>', 'npm registry', PUBLIC_REGISTRY)
++    .option('--package-tags-only <names>', 'only exact package release tags for comma-separated package names; no unified tags or default-branch versions')
+     .addOption(new Option('--inline-icon-bytes <n>', `largest icon embedded as a data URL, at most ${String(MAX_INLINE_ICON_BYTES)}`)
+       .argParser(integer(MAX_INLINE_ICON_BYTES)).default(16384))
+     .addOption(new Option('--concurrency <n>', 'sources read at once').argParser(integer()).default(4))
+@@ -78,6 +80,7 @@ async function run(options: Options): Promise<number> {
+     inlineIconBytes: options.inlineIconBytes,
+     limits: { timeoutMs: options.timeoutMs, maxTarballBytes: 64 * 1024 * 1024 },
+     concurrency: options.concurrency,
++    ...options.packageTagsOnly === undefined ? {} : { packageTagsOnly: options.packageTagsOnly.split(',').map(name => name.trim()).filter(Boolean) },
+     warn: (message) => { console.error(`warning: ${message}`) },
+   })
+   for (const [path, cached] of result.icons) writeIfChanged(join(dirname(output), path), readFileSync(cached))
+diff --git a/apps/plugin-market-generator/src/generate.ts b/apps/plugin-market-generator/src/generate.ts
+index 09fbf4fa3a..05933ed90a 100644
+--- a/apps/plugin-market-generator/src/generate.ts
++++ b/apps/plugin-market-generator/src/generate.ts
+@@ -39,6 +39,8 @@ export interface GenerateOptions {
+   readonly warn: (message: string) => void
+   /** Git transports allowed besides none; `['https', 'ssh']` when absent. Tests add `file` for local repositories. */
+   readonly gitTransports?: GitTransports
++  /** Opt in to only exact `<name>@<version>` tags for these package identities; never list default-branch versions. */
++  readonly packageTagsOnly?: readonly string[]
+ }
+
+ /** A finished run: the index document, the icon files it refers to, and the sources that could not be read. */
+@@ -61,6 +63,11 @@ const VALIDATION_URL = 'https://index.invalid/index.json'
+ /** Part of every cache key; change it when the way entries are derived changes, so cached results are rebuilt. */
+ const CACHE_VERSION = 7
+
++/** Preserve original cache identities by default; isolate strict result AND last-success records by allowlist. */
++function releasePolicyKey(options: GenerateOptions): unknown[] {
++  return options.packageTagsOnly === undefined ? [] : ['package-tags-only-v1', [...new Set(options.packageTagsOnly)].sort()]
++}
++
+ /** Why the index format rejects these plugins, or undefined when it accepts them. */
+ function invalid(plugins: unknown): string | undefined {
+   try {
+@@ -192,9 +199,11 @@ interface ReleaseTag {
+   readonly name?: string
+ }
+
+-function releaseTag(tag: string, commit: string): ReleaseTag | undefined {
++function releaseTag(tag: string, commit: string, packageTagsOnly: boolean): ReleaseTag | undefined {
+   const { name, version = '' } = /^(?:(?<name>.+)@|v)?(?<version>[^@]+)$/u.exec(tag)?.groups ?? {}
+-  return semver.valid(version) === version ? { tag, commit, version, ...name === undefined ? {} : { name } } : undefined
++  // semver.valid drops build metadata; strict mode still requires the original exact manifest version below.
++  const normalized = packageTagsOnly ? version.replace(/\+.*$/u, '') : version
++  return semver.valid(version) === normalized ? { tag, commit, version, ...name === undefined ? {} : { name } } : undefined
+ }
+
+ /**
+@@ -204,19 +213,20 @@ function releaseTag(tag: string, commit: string): ReleaseTag | undefined {
+ async function readGit(source: Extract<Source, { kind: 'git' }>, options: GenerateOptions, cache: Cache): Promise<GeneratedEntry[]> {
+   const transports = options.gitTransports ?? ['https', 'ssh']
+   const refs = await gitRefs(source.url, transports, options.limits)
+-  const tags = [...refs.tags].flatMap(([tag, commit]) => releaseTag(tag, commit) ?? [])
+-  const file = cache.file('git', options.inlineIconBytes, source.url, refs.head, tags.map(tag => [tag.tag, tag.commit]))
++  const tags = [...refs.tags].flatMap(([tag, commit]) => releaseTag(tag, commit, options.packageTagsOnly !== undefined) ?? [])
++  const file = cache.file('git', options.inlineIconBytes, source.url, refs.head, tags.map(tag => [tag.tag, tag.commit]), ...releasePolicyKey(options))
+   const cached = cache.plugins(file)
+   if (cached !== undefined) return cached
+   const warn = (message: string) => { options.warn(`${source.line}: ${message}`) }
+   const unitFile = (kind: string, commit: string, path: string) => cache.file(kind, options.inlineIconBytes, source.url, commit, path)
+   const plugins = await withGitObjects(source.url, refs, transports, options.limits, async (objects) => {
+-    const packages = await headPackages(await objects.tree(refs.head, ''), warn)
++    const packages = (await headPackages(await objects.tree(refs.head, ''), warn))
++      .filter(found => options.packageTagsOnly === undefined || options.packageTagsOnly.includes(found.name))
+     // Lower ranks win when several commits carry one version: `<name>@` tags, then unified tags, then the default branch.
+     const units = [
+-      ...tags.flatMap(tag => packages.filter(found => tag.name === undefined || tag.name === found.name)
++      ...tags.flatMap(tag => packages.filter(found => tag.name === found.name || (tag.name === undefined && options.packageTagsOnly === undefined))
+         .map(found => ({ found, commit: tag.commit, version: tag.version, rank: tag.name === undefined ? 1 : 0 }))),
+-      ...packages.map(found => ({ found, commit: refs.head, version: undefined, rank: 2 })),
++      ...(options.packageTagsOnly === undefined ? packages.map(found => ({ found, commit: refs.head, version: undefined, rank: 2 })) : []),
+     ].map(unit => ({ ...unit, file: unitFile('release', unit.commit, unit.found.path) }))
+     const cached = new Map(units.map(unit => [unit.file, cache.release(unit.file)]))
+     await objects.fetch(units.flatMap(unit => cached.get(unit.file) === undefined ? [unit.commit] : []))
+@@ -321,7 +331,7 @@ export async function generate(options: GenerateOptions): Promise<GenerateResult
+   const cache = new Cache(options.cacheDir)
+   const failed: (string | undefined)[] = new Array<string | undefined>(options.sources.length)
+   const results = await mapLimited(options.sources, options.concurrency, async (source, position) => {
+-    const lastFile = join(options.cacheDir, 'last', `${cacheKey(JSON.stringify([CACHE_VERSION, options.registry, options.inlineIconBytes, source.line]))}.json`)
++    const lastFile = join(options.cacheDir, 'last', `${cacheKey(JSON.stringify([CACHE_VERSION, options.registry, options.inlineIconBytes, source.line, ...releasePolicyKey(options)]))}.json`)
+     try {
+       const plugins = source.kind === 'npm' ? await readNpm(source, options, cache) : await readGit(source, options, cache)
+       cache.write(lastFile, { plugins }, [])

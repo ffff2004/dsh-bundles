@@ -7,6 +7,10 @@
     "lint": "syncpack lint && eslint . && node scripts/check-dependencies.mjs",
     "test:lint": "node --test scripts/dependencies.test.mjs",
     "test:release": "node --test scripts/release.test.mjs",
+    "market:generate": "node scripts/market.mjs generate",
+    "market:validate": "node scripts/market.mjs validate",
+    "test:market": "node --test scripts/market.test.mjs",
+    "test:market:integration": "node scripts/market.mjs test",
     "changeset": "changeset",
     "version-packages": "changeset version"
   },

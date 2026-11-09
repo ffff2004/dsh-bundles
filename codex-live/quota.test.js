@@ -42,7 +42,7 @@ function usage(overrides = {}) {
 /**
  * Build a service over recording fakes.
  * @param {object} [options] - per-test overrides.
- * @param {object | null} [options.auth] - credential; `null` means no login.
+ * @param {object | null | (() => object)} [options.auth] - credential or reader; `null` means no login.
  * @param {object} [options.usage] - usage body served for `USAGE_URL`.
  * @param {object} [options.credits] - credit body served for `CREDITS_URL`.
  * @param {() => number} [options.now] - clock.
@@ -66,7 +66,7 @@ function harness({ auth = CREDENTIAL, usage: usageBody, credits, now = () => NOW
     throw new Error(`unexpected upstream URL ${url}`)
   }
   const service = createQuotaService({
-    readAuth: async () => (auth === null ? undefined : auth),
+    readAuth: async () => (typeof auth === 'function' ? auth() : auth === null ? undefined : auth),
     fetchJson,
     now,
     baseUrl,
@@ -177,6 +177,126 @@ test('shares one in-flight snapshot between concurrent callers', async () => {
   assert.equal(calls.length, 1)
   for (const view of views) assert.equal(view.status, 'ok')
 })
+
+/** Distinct wire fixtures make cross-account usage and credit leaks observable. */
+function accountReply(url, accountId) {
+  return url === USAGE_URL
+    ? { status: 200, body: usage({
+      email: `${accountId}@example.com`,
+      rate_limit: { primary_window: { used_percent: accountId === 'A' ? 90 : 20 } },
+      rate_limit_reset_credits: { available_count: accountId === 'A' ? 1 : 2 },
+    }) }
+    : { status: 200, body: { credits: [{ id: `${accountId}-credit`, status: 'available', title: accountId }] } }
+}
+
+function assertAccount(view, accountId) {
+  assert.equal(view.email, `${accountId}@example.com`)
+  assert.equal(view.windows[0].remainingPercent, accountId === 'A' ? 10 : 80)
+  assert.equal(view.credits.availableCount, accountId === 'A' ? 1 : 2)
+  assert.deepEqual(view.credits.items, [{ id: `${accountId}-credit`, title: accountId }])
+}
+
+test('isolates cached usage and credits when the credential switches accounts', async () => {
+  let accountId = 'A'
+  const { service, calls } = harness({
+    auth: () => ({ ...CREDENTIAL, accountId }),
+    respond: (url, init) => accountReply(url, init.headers['ChatGPT-Account-Id']),
+  })
+  assertAccount(await service.snapshot(), 'A')
+  accountId = 'B'
+  assertAccount(await service.snapshot(), 'B')
+  assertAccount(await service.snapshot(), 'B')
+  assert.equal(calls.length, 4, 'same-account usage and credits remain cached')
+})
+
+function deferred() {
+  let resolve
+  const promise = new Promise(done => { resolve = done })
+  return { promise, resolve }
+}
+
+for (const heldUrl of [USAGE_URL, CREDITS_URL]) {
+  for (const fails of [false, true]) {
+    test(`isolates late account A ${heldUrl === USAGE_URL ? 'usage' : 'credits'} ${fails ? 'failure' : 'success'} from account B`, async () => {
+      let accountId = 'A'
+      const entered = deferred()
+      const release = deferred()
+      const { service, calls } = harness({
+        auth: () => ({ ...CREDENTIAL, accountId }),
+        respond: async (url, init) => {
+          const requestedAccount = init.headers['ChatGPT-Account-Id']
+          if (requestedAccount === 'A' && url === heldUrl) {
+            entered.resolve()
+            await release.promise
+            if (fails) throw new Error(`transport failed with ${CREDENTIAL.token}`)
+          }
+          return accountReply(url, requestedAccount)
+        },
+      })
+      const old = service.snapshot()
+      await entered.promise
+      // A concurrent refresh must join the same-account in-flight request.
+      const shared = service.snapshot({ refresh: true })
+      await new Promise(resolve => setImmediate(resolve))
+      accountId = 'B'
+      const current = service.snapshot()
+      await new Promise(resolve => setImmediate(resolve))
+      release.resolve()
+      const [oldView, sharedView, currentView] = await Promise.all([old, shared, current])
+      assertAccount(currentView, 'B')
+      assert.deepEqual(sharedView, oldView)
+      if (!fails) assertAccount(oldView, 'A')
+      else if (heldUrl === USAGE_URL) assert.deepEqual(oldView, { status: 'upstream-error', detail: 'network' })
+      else assert.deepEqual(oldView.credits, { availableCount: 1, items: null })
+      assertAccount(await service.snapshot(), 'B')
+      for (const url of [USAGE_URL, CREDITS_URL]) {
+        assert.equal(calls.filter(call => call.url === url && call.init.headers['ChatGPT-Account-Id'] === 'B').length, 1)
+      }
+      assert.equal(calls.filter(call => call.url === heldUrl && call.init.headers['ChatGPT-Account-Id'] === 'A').length, 1)
+    })
+  }
+}
+
+for (const heldUrl of [USAGE_URL, CREDITS_URL]) {
+  test(`redemption starts a new epoch without joining pending ${heldUrl === USAGE_URL ? 'usage' : 'credits'}`, async () => {
+    const entered = deferred()
+    const release = deferred()
+    let redeemed = false
+    const { service, calls } = harness({
+      respond: async (url) => {
+        if (url === CONSUME_URL) {
+          redeemed = true
+          return { status: 200, body: { code: 'reset', windows_reset: 1 } }
+        }
+        const beforeReset = !redeemed
+        if (url === heldUrl && beforeReset) {
+          entered.resolve()
+          await release.promise
+        }
+        if (url === USAGE_URL) return { status: 200, body: usage({
+          rate_limit: { primary_window: { used_percent: beforeReset ? 100 : 0 } },
+          rate_limit_reset_credits: { available_count: beforeReset ? 2 : 1 },
+        }) }
+        return { status: 200, body: { credits: [{
+          id: beforeReset ? 'pre-reset' : 'post-reset', status: 'available', title: 'Reset',
+        }] } }
+      },
+    })
+    const old = service.snapshot()
+    await entered.promise
+    await service.consume({ redeemRequestId: 'request-1', creditId: 'pre-reset' })
+    const current = service.snapshot()
+    const shared = service.snapshot({ refresh: true })
+    await new Promise(resolve => setImmediate(resolve))
+    release.resolve()
+    const [, view, sharedView] = await Promise.all([old, current, shared])
+    assert.equal(view.windows[0].remainingPercent, 100)
+    assert.deepEqual(view.credits, { availableCount: 1, items: [{ id: 'post-reset', title: 'Reset' }] })
+    assert.deepEqual(sharedView, view)
+    assert.deepEqual(await service.snapshot(), view, 'late old read must not replace the new cache')
+    assert.equal(calls.filter(call => call.url === heldUrl).length, 2, 'one read per epoch, shared within each epoch')
+  })
+}
 
 test('does not request the credit list when the count is zero', async () => {
   const { service, calls } = harness()

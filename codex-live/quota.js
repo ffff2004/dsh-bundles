@@ -211,19 +211,22 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
   }
 
   /**
-   * One 60s memo with single-flight. A service instance serves exactly one
-   * account, so each projection owns one slot; the redemption epoch keeps a read
-   * that started before a reset from seeding the cache with pre-reset data.
+   * One 60s memo with single-flight per account: the credential file can change
+   * accounts during this service's lifetime. Separate slots also keep a late
+   * request from overwriting another account's cache or in-flight read.
    * @param {(credential: object) => Promise<unknown>} read - one upstream read.
    * @param {(value: unknown) => boolean} cacheable - whether that result may be cached.
    * @param {(value: unknown) => number} stampedAt - the instant the value became known.
    * @returns {(credential: object, refresh: boolean) => Promise<unknown>} the cached read.
    */
   const memo = (read, cacheable, stampedAt) => {
-    let cache
-    let inFlight
-    /** The cached read. `clear` drops the slot; callers holding a result keep it. */
+    const accounts = new Map()
+    /** The cached read. Old callers keep their results after invalidation. */
     const load = (credential, refresh) => {
+      const accountId = credential.accountId
+      if (!accounts.has(accountId)) accounts.set(accountId, {})
+      const slot = accounts.get(accountId)
+      const { cache, inFlight } = slot
       if (!refresh && cache !== undefined && now() - cache.at < CACHE_TTL_MS) {
         return Promise.resolve(cache.value)
       }
@@ -232,17 +235,19 @@ export function createQuotaService({ readAuth, fetchJson, now, baseUrl, authPath
       if (inFlight !== undefined) return inFlight
       const started = epoch
       const pending = read(credential).then((value) => {
-        if (cacheable(value) && started === epoch) cache = { at: stampedAt(value), value }
+        if (cacheable(value) && started === epoch) slot.cache = { at: stampedAt(value), value }
         return value
       })
-      inFlight = pending
+      slot.inFlight = pending
       const settle = () => {
-        if (inFlight === pending) inFlight = undefined
+        if (slot.inFlight === pending) slot.inFlight = undefined
       }
       void pending.then(settle, settle)
       return pending
     }
-    load.clear = () => { cache = undefined }
+    // Detach pending reads as well as cached values. A post-redemption caller
+    // must not join a pre-reset promise; late settlement only touches old slots.
+    load.clear = () => { accounts.clear() }
     return load
   }
 

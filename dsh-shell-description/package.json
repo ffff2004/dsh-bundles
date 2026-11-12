@@ -1,5 +1,5 @@
 {
-  "name": "@local/dsh-shell-description",
+  "name": "@ffff2004-dsh-packages/shell-description",
   "version": "1.0.3",
   "private": true,
   "type": "module",

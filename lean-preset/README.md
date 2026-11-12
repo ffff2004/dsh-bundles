@@ -41,7 +41,7 @@
 
 ## 工具排序
 
-仅 `lean-cordis` 挂载本 bundle 的 `@local/dsh-lean-preset/tool-order` 插件，通过 scope-filtered 的 `system-prompt/assemble` waterfall，在 `await next()` 返回后将以下四个额外工具移到尾部：
+仅 `lean-cordis` 挂载本 bundle 的 `@ffff2004-dsh-packages/lean-preset/tool-order` 插件，通过 scope-filtered 的 `system-prompt/assemble` waterfall，在 `await next()` 返回后将以下四个额外工具移到尾部：
 
 - `cordis_inspect_list`
 - `cordis_inspect_query`
@@ -59,10 +59,10 @@
 
 此排序只改变工具 schema 的顺序，不同步重排系统提示中的工具指导、Skills catalog 或其他消息；这些内容及服务端隐藏渲染也可能提前打断公共前缀。尚未通过真实请求验证缓存收益。DeepSeek 可比较多次预热后交替使用两个 preset 的 `usage.prompt_cache_hit_tokens` / (`prompt_cache_hit_tokens` + `prompt_cache_miss_tokens`)；OpenAI API 可比较 `usage.input_tokens_details.cached_tokens`、`cache_write_tokens` 和实际成本，并保持模型、设置及其余输入条件一致。
 
-在仓库根目录运行 `pnpm --filter @local/dsh-lean-preset test`，验证 YAML（含惰性 `!!js`）、PTC 与 lean 的基础配置一致性、隔离组、稳定排序、waterfall 兼容和挂载范围，以及每个带 `config` 的插件行都被对应上游包导出的 schemastery `Config` 接受（含嵌套键；含 Loader 表达式的行只校验键名，表达式值不求值；`dsh-compaction-tool-result-pruner` 用其 `resolveConfig`，未知键会抛错）。
+在仓库根目录运行 `pnpm --filter @ffff2004-dsh-packages/lean-preset test`，验证 YAML（含惰性 `!!js`）、PTC 与 lean 的基础配置一致性、隔离组、稳定排序、waterfall 兼容和挂载范围，以及每个带 `config` 的插件行都被对应上游包导出的 schemastery `Config` 接受（含嵌套键；含 Loader 表达式的行只校验键名，表达式值不求值；`dsh-compaction-tool-result-pruner` 用其 `resolveConfig`，未知键会抛错）。
 
 ## 使用
 
-通过 Harness Plugin Manager 安装本目录，然后在新会话中选择“轻量模式”“轻量创造模式”或“轻量 PTC 模式”。包名为 `@local/dsh-lean-preset`。更新 bundle 后，已有会话保留原 preset 版本，新建会话使用新版本。
+通过 Harness Plugin Manager 安装本目录，然后在新会话中选择“轻量模式”“轻量创造模式”或“轻量 PTC 模式”。包名为 `@ffff2004-dsh-packages/lean-preset`。更新 bundle 后，已有会话保留原 preset 版本，新建会话使用新版本。
 
 此 bundle 依赖宿主提供工具注册表、Shell 执行器、文件系统及权限等服务。升级 DSH 后，应重新验证系统提示与工具装配。

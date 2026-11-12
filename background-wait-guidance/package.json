@@ -1,5 +1,5 @@
 {
-  "name": "@local/dsh-background-wait-guidance",
+  "name": "@ffff2004-dsh-packages/background-wait-guidance",
   "version": "2.0.4",
   "private": true,
   "type": "module",

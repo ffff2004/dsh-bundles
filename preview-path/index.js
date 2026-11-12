@@ -6,7 +6,7 @@
  * opens files through the existing `workspaceFiles` Remote and the Sidebar's
  * own tab controller. No Host route, service, or configuration is added.
  *
- * @module @local/dsh-preview-path
+ * @module @ffff2004-dsh-packages/preview-path
  */
 
 /** The Host row exists only to carry the Client row. */

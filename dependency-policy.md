@@ -49,4 +49,4 @@ pnpm -r test
 
 各 bundle 的 `test` script 统一为 `node --test`，按 Node 默认发现运行测试文件；现有测试位置保持不变。两个 preview bundle 的[下载路由测试](<preview-download/contract.test.mjs>)与[客户端契约测试](<preview-path/contract.test.mjs>)均注册显式 `node:test` 场景组，保留原自检的逐标签聚合断言；浏览器 mock 在测试结束时还原，下载临时文件在 finally 中清理。
 
-`pnpm test:lint` 通过真实 Syncpack、ESLint 和语义 CLI 运行临时正反例，覆盖缺声明、根兜底、dev-only、共享实例字段/配对/版本、unused peer 与契约例外、新 bundle 发现，并验证不同合法范围/新精确 dev 可通过、prerelease 满足关系及跨包漂移仅由 Syncpack 拒绝。`pnpm -r test` 不执行根检查器测试，CI 显式运行以上全部 gates；CI 使用 Node 24，本地实施验证使用 Node 26。市场 PR job 仍只读取远端 refs，不能代替本地工作树检查。
+`pnpm test:lint` 通过真实 Syncpack、ESLint 和语义 CLI 运行临时正反例，覆盖缺声明、根兜底、dev-only、共享实例字段/配对/版本、unused peer 与契约例外、新 bundle 发现，并验证不同合法范围/新精确 dev 可通过、prerelease 满足关系及跨包漂移仅由 Syncpack 拒绝。`pnpm -r test` 不执行根检查器测试，CI 显式运行以上全部 gates，并另行执行 `pnpm test:release`；CI 使用 Node 24，本地实施验证使用 Node 26。市场 PR job 读取远端 refs，不能代替本地工作树检查；版本与发布测试边界见[发布说明](<plugin-market-publishing.md>)。

@@ -37,7 +37,7 @@
  */
 
 window.__ModuleLoader__.load({
-  id: '@local/dsh-preview-path',
+  id: '@ffff2004-dsh-packages/preview-path',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -95,7 +95,7 @@ window.__ModuleLoader__.load({
 
     /** Page type that lists a directory; its id is also the body and title cell key. */
     const DIRECTORY_KIND = 'preview-path-directory'
-    const DIRECTORY_ID = '@local/dsh-preview-path/directory'
+    const DIRECTORY_ID = '@ffff2004-dsh-packages/preview-path/directory'
 
     /** Reads sort like names, not bytes: `file2` before `file10`, ignored case. */
     const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })

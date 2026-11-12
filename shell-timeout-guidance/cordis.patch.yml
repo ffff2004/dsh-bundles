@@ -1,4 +1,4 @@
 - insert:
     - id: shell-timeout-guidance
-      name: '@local/dsh-shell-timeout-guidance'
+      name: '@ffff2004-dsh-packages/shell-timeout-guidance'
       config: {}

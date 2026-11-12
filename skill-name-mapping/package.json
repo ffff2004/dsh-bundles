@@ -1,5 +1,5 @@
 {
-  "name": "@local/dsh-skill-name-mapping",
+  "name": "@ffff2004-dsh-packages/skill-name-mapping",
   "version": "2.0.2",
   "private": true,
   "type": "module",

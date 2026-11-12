@@ -6,7 +6,9 @@ place local DSH (DeepSeek Harness) bundles here.
 
 use conventional commit `<type>[(<bundle-name>)]: ...`
 
-插件市场发布、CI/Pages 维护或本地生成索引时，先读 [发布说明](<plugin-market-publishing.md>)。
+修改 bundle 用户可见行为或编写变更集（changeset）时，先读[Changesets 约定](<.changeset/README.md>)。
+
+维护版本发布、CI/Pages 或本地生成市场索引时，先读[发布说明](<plugin-market-publishing.md>)。
 
 新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
 
@@ -18,10 +20,11 @@ use conventional commit `<type>[(<bundle-name>)]: ...`
 pnpm install --frozen-lockfile
 pnpm lint       # 只读：版本一致性、源码声明与兼容策略
 pnpm test:lint  # 根检查器的真实 CLI 正反例
+pnpm test:release # 版本、tag 与市场发布边界
 pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 ```
 
-所有 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @local/dsh-shell-description test`。
+所有 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @ffff2004-dsh-packages/shell-description test`。
 
 测试源码放在 bundle 根 `test/`、`tests/`、`__tests__/`（含其中子目录）或根 `*.test.js/mjs/cjs`。只有这些位置可使用 dev-only 依赖；其它位置（包括 `src/tests/`、`src/*.test.*`）按生产源码检查。
 

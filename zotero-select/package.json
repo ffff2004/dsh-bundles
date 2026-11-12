@@ -1,5 +1,5 @@
 {
-  "name": "@local/dsh-zotero-select",
+  "name": "@ffff2004-dsh-packages/zotero-select",
   "version": "1.0.0",
   "private": true,
   "type": "module",

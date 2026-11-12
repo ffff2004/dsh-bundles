@@ -1,4 +1,4 @@
 - insert:
     - id: skill-name-mapping
-      name: '@local/dsh-skill-name-mapping'
+      name: '@ffff2004-dsh-packages/skill-name-mapping'
       config: {}

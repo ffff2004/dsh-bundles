@@ -65,7 +65,7 @@ test('lean-ptc has exactly the lean composition plus official PTC presentation',
 
 test('only lean-cordis mounts the Cordis tool-order policy', () => {
   for (const row of declarations) {
-    const policies = row.config.plugins.filter(plugin => plugin.name === '@local/dsh-lean-preset/tool-order')
+    const policies = row.config.plugins.filter(plugin => plugin.name === '@ffff2004-dsh-packages/lean-preset/tool-order')
     assert.equal(policies.length, row.config.id === 'lean-cordis' ? 1 : 0)
   }
 })
@@ -79,7 +79,7 @@ test('PTC keeps compaction providers and consumers in the same isolated group', 
 })
 
 test('package export ./tool-order resolves to the implemented plugin', async () => {
-  const plugin = await import('@local/dsh-lean-preset/tool-order')
+  const plugin = await import('@ffff2004-dsh-packages/lean-preset/tool-order')
   assert.equal(plugin.apply, apply)
 })
 

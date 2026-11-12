@@ -1,0 +1,196 @@
+name: Release PR and authorized market batches
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_pr:
+        description: 'Merged authorized Release PR number to recover (all durable batches are reconciled)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# GitHub can discard pending runs; durable merged PRs, NOT this queue, record batches.
+# Keep the lock through deployment and completion statuses, including old-run reruns.
+concurrency:
+  group: market-release-main
+  cancel-in-progress: false
+
+jobs:
+  main-checks:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: main
+
+  prepare:
+    needs: main-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      head: ${{ steps.pr.outputs.head }}
+    steps:
+      # Always current trusted main, NEVER the SHA of an old workflow rerun or PR artifact.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - id: pr
+        run: node scripts/release.mjs prepare
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  # GITHUB_TOKEN-created PRs do not recursively trigger pull_request workflows.
+  # Execute the same read-only checks explicitly on the generated immutable head.
+  release-checks:
+    needs: prepare
+    if: needs.prepare.outputs.head != ''
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.prepare.outputs.head }}
+
+  report-release-checks:
+    needs: [prepare, release-checks]
+    if: always() && needs.prepare.outputs.head != ''
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          RELEASE_HEAD: ${{ needs.prepare.outputs.head }}
+          CHECK_RESULT: ${{ needs.release-checks.result }}
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              ...context.repo, sha: process.env.RELEASE_HEAD,
+              state: process.env.CHECK_RESULT === 'success' ? 'success' : 'failure',
+              context: 'dsh-release/checks', description: 'Explicit bot Release PR validation',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
+
+  recover:
+    needs: [main-checks, prepare]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: read
+      statuses: read
+    outputs:
+      publish: ${{ steps.recover.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Reconcile every durable authorized batch (first boot produces no deployment job)
+        id: recover
+        run: node scripts/release.mjs recover
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RECOVERY_PR: ${{ inputs.release_pr }}
+
+  publish:
+    needs: recover
+    if: needs.recover.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: read
+      statuses: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify durable authorizations and finish every tag batch
+        id: recover
+        run: node scripts/release.mjs recover
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RECOVERY_PR: ${{ inputs.release_pr }}
+      - uses: actions/checkout@v4
+        if: steps.recover.outputs.publish == 'true'
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: 687f282e8625c6b8d11ff58211a90524be2e4317
+          path: .dsh-source
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        if: steps.recover.outputs.publish == 'true'
+        with:
+          package_json_file: .dsh-source/package.json
+          run_install: false
+      - name: Install pinned generator dependencies
+        if: steps.recover.outputs.publish == 'true'
+        working-directory: .dsh-source
+        run: pnpm --filter '@deepseek-ai/dsh-plugin-market-generator...' install --frozen-lockfile --ignore-scripts
+      - uses: actions/cache@v4
+        if: steps.recover.outputs.publish == 'true'
+        with:
+          path: .plugin-market-cache
+          key: market-package-tags-only-v1-${{ runner.os }}-687f282e8625c6b8d11ff58211a90524be2e4317-${{ hashFiles('scripts/patches/market-package-tags-only.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            market-package-tags-only-v1-${{ runner.os }}-687f282e8625c6b8d11ff58211a90524be2e4317-${{ hashFiles('scripts/patches/market-package-tags-only.patch') }}-
+      - name: Generate exactly once from current remote full tags (never allow empty)
+        if: steps.recover.outputs.publish == 'true'
+        run: |
+          printf '%s/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/plugin-market-sources.txt"
+          node scripts/market.mjs generate --upstream .dsh-source \
+            --input "$RUNNER_TEMP/plugin-market-sources.txt" --output _site/index.json --cache .plugin-market-cache
+      - name: Recheck full snapshot and every authorized package before deployment
+        if: steps.recover.outputs.publish == 'true'
+        run: node scripts/release.mjs validate-snapshot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.recover.outputs.publish == 'true'
+        with:
+          path: _site
+      - uses: actions/configure-pages@v5
+        if: steps.recover.outputs.publish == 'true'
+      - uses: actions/deploy-pages@v4
+        if: steps.recover.outputs.publish == 'true'
+        id: deployment
+      - name: Record completed durable batches only after successful deployment
+        if: steps.recover.outputs.publish == 'true'
+        run: node scripts/release.mjs complete
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

@@ -31,7 +31,7 @@ https://ffff2004.github.io/dsh-bundles/index.json
 ```
 
 选择 bundle 和版本，确认来源后安装。索引中的 Git 来源固定到 commit，不会在安装时漂移到新的 `HEAD`。
-该地址需要维护者完成 [Pages 首次配置](<plugin-market-publishing.md#首次启用>) 并成功部署后才可用。
+该地址需要维护者完成 [Pages 首次配置](<plugin-market-publishing.md#发布边界与首次启用>) 并成功部署后才可用。
 
 ### 从 GitHub 安装（GUI）
 
@@ -62,8 +62,8 @@ dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HE
 
 ## 本地开发
 
-安装与统一 gates 见 [AGENTS.md](<AGENTS.md>)；`pnpm lint` 是独立只读检查，`pnpm test:lint` 验证检查器正反例，`pnpm -r test` 保留各 bundle 行为测试；`pnpm test:release` 检查 namespace、自引用与 Changesets 版本计划（初始 changesets 被 Release PR 消费后跳过初始计划断言）。
+安装与统一 gates 见 [AGENTS.md](<AGENTS.md>)；`pnpm lint` 是独立只读检查，`pnpm test:lint` 验证检查器正反例，`pnpm -r test` 保留各 bundle 行为测试；`pnpm test:release` 检查 namespace、自引用与 Changesets 版本计划（初始 changesets 被 Release PR 消费后跳过初始计划断言），并用离线 Git/API fixtures 验证发布授权和恢复。`pnpm test:market` 与 `pnpm test:market:integration --upstream <固定上游 checkout>` 是额外的显式根 gates。
 
 ## 发布维护
 
-首次配置、版本发布及本地生成步骤见 [插件市场发布说明](<plugin-market-publishing.md>)。
+功能 PR 只添加 changeset、不提前改版本；main 自动创建/更新独立 Release PR。实现 PR 合并不会替换线上索引，只有人工审核并合并 Release PR 才授权整批发布。首次配置、恢复与本地生成步骤见 [插件市场发布说明](<plugin-market-publishing.md>)。

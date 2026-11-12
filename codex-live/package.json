@@ -3,6 +3,12 @@
   "version": "1.1.2",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/codex-live",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "codex-live"
+  },
   "description": "Registers a codex-live provider whose model catalog follows the local codex CLI state, and serves a Codex quota settings page for the same account.",
   "meta": {
     "title": "OpenAI Codex (live)",

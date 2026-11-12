@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/zotero-select",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "zotero-select"
+  },
   "description": "Extract Zotero select Markdown links into a per-reply literature menu and guide citation formatting.",
   "engines": { "dsh": ">=0.2.1-rc.3 <0.3.0-0" },
   "exports": {

@@ -3,6 +3,12 @@
   "version": "1.2.1",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/preview-path",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "preview-path"
+  },
   "description": "Make Web UI paths editable and browse directories by path, opening the typed file or directory in place.",
   "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "exports": {

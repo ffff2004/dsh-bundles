@@ -3,6 +3,12 @@
   "version": "1.0.2",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/preview-download",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "preview-download"
+  },
   "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "meta": {
     "title": "Preview download",

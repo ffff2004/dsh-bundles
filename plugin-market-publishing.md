@@ -10,10 +10,6 @@
 
 配置 PR 合并只准备 Release PR，不直接发布。首次 Release PR 发布新身份下全部 9 个包并纳入已有未发布内容；后续由各 changeset 指定包及 SemVer 升级级别。Conventional Commits 不参与自动推断版本。
 
-### Scope 迁移
-
-包名为 `@ffff2004-dsh-packages/<名称>`，省略原 `dsh-` 前缀；源码目录不必同名，`pnpm lint` 会拒绝 scope 不符的 bundle 名。旧 `@local/dsh-*` 身份及历史不会迁移进新索引，也没有兼容入口。旧用户需移除旧包及配置引用，再安装和配置新包，避免重复加载；旧安装不会自动卸载或原地升级。
-
 ## 发布边界与校验
 
 - 发布意图由 Release PR 表达，tag 固定内容，Pages 部署成功后才对市场用户可见；普通 `main` 修改和未打 tag 的 manifest 版本均不进入市场。

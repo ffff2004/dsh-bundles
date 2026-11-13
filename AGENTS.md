@@ -12,6 +12,10 @@ use conventional commit `<type>[(<bundle-name>)]: ...`
 
 新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
 
+## 包名 scope
+
+bundle 的 `package.json` `name` 使用 `@ffff2004-dsh-packages/<名称>`，省略 `dsh-` 前缀；源码目录不必同名。`pnpm lint` 会拒绝 scope 不符的名称，发布脚本在创建 tag 前也会校验。旧 `@local/dsh-*` 身份不提供兼容入口。
+
 ## 本地开发
 
 仓库使用一个 pnpm workspace 共享安装和锁文件；每个 bundle 仍是可独立安装的包，`package.json` 中的声明才是发布后真正生效的内容。

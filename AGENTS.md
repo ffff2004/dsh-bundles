@@ -18,7 +18,7 @@ use conventional commit `<type>[(<bundle-name>)]: ...`
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm lint       # 只读：版本一致性、源码声明与兼容策略
+pnpm lint       # 只读：版本一致性、bundle 名 scope、源码声明与兼容策略
 pnpm test:lint  # 根检查器的真实 CLI 正反例
 pnpm test:release # 版本、tag 与市场发布边界
 pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）

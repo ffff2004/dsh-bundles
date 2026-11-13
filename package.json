@@ -4,8 +4,8 @@
   "type": "module",
   "packageManager": "pnpm@11.25.0",
   "scripts": {
-    "lint": "syncpack lint && eslint . && node scripts/check-dependencies.mjs",
-    "test:lint": "node --test scripts/dependencies.test.mjs",
+    "lint": "syncpack lint && eslint . && node scripts/check-market-scope.mjs && node scripts/check-dependencies.mjs",
+    "test:lint": "node --test scripts/dependencies.test.mjs scripts/bundle-scope.test.mjs",
     "test:release": "node --test scripts/release*.test.mjs scripts/market*.test.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only"

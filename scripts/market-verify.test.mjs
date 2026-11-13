@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { parseReleaseTag } from './market-policy.mjs';
+import { MARKET_SCOPE, parseReleaseTag } from './market-policy.mjs';
 import { fixture, indexAt, manifest, NAME, SOURCE_URL } from './market-test-fixture.mjs';
 import { verifyMarket } from './market-verify.mjs';
 
@@ -15,6 +15,7 @@ test('only full new-scope exact canonical SemVer tags qualify', () => {
   for (const version of ['1.0.0', '2.0.0-rc.1', '1.0.0+build.5']) {
     assert.deepEqual(parseReleaseTag(`${NAME}@${version}`), { name: NAME, version });
   }
+  assert.deepEqual(parseReleaseTag(`${MARKET_SCOPE}alpha@1.0.0`), { name: `${MARKET_SCOPE}alpha`, version: '1.0.0' });
   for (const tag of ['HEAD', '1.0.0', 'v1.0.0', '@local/dsh-shell-description@1.0.0',
     '@other/shell-description@1.0.0', `${NAME}@v1.0.0`, `${NAME}@01.0.0`, `${NAME}@1.0`,
     `${NAME}@1.0.0-01`, `${NAME}@1.0.0 `, `${NAME}@=1.0.0`, '@ffff2004-dsh-packages/@1.0.0']) {

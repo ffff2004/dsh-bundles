@@ -9,8 +9,8 @@ import { parse } from 'yaml'
 import { planRelease, publishRelease } from './release.mjs'
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const alpha = '@example-packages/alpha'
-const beta = '@example-packages/beta'
+const alpha = '@ffff2004-dsh-packages/alpha'
+const beta = '@ffff2004-dsh-packages/beta'
 const tag = (name, version = '1.0.1') => `${name}@${version}`
 
 function fixture(t) {
@@ -163,6 +163,17 @@ test('rejects a simultaneous rename/version bump and a non-private release', t =
   assert.throws(() => planRelease(f.options(f.commit())), /must remain private/u)
 })
 
+test('rejects a bundle name outside the market scope before writing tags', t => {
+  const f = fixture(t)
+  f.manifest('beta', '@local/dsh-beta', '1.0.0')
+  f.changeset('beta', ['@local/dsh-beta'])
+  f.commit()
+  f.manifest('beta', '@local/dsh-beta', '1.0.1')
+  f.consume('beta')
+  assert.throws(() => planRelease(f.options(f.commit())), /outside @ffff2004-dsh-packages\//u)
+  assert.equal(f.remoteTags(), '')
+})
+
 test('retry rejects an arbitrary side-branch ref even when it contains a valid release diff', t => {
   const f = fixture(t)
   const ref = f.release()
@@ -204,7 +215,7 @@ test('a conflicting later tag aborts the whole batch before any tag write', t =>
   const before = f.remoteTags()
   assert.throws(() => publishRelease(f.options(ref)), /already points to another commit/u)
   assert.equal(f.remoteTags(), before)
-  assert.doesNotMatch(before, /refs\/tags\/@example-packages\/alpha/u)
+  assert.doesNotMatch(before, /refs\/tags\/@ffff2004-dsh-packages\/alpha/u)
   assert.equal(f.git('tag', '--list'), '')
 })
 
@@ -379,4 +390,6 @@ test('workflow keeps trusted main execution, token permissions, explicit PR disp
   const verify = ci.jobs.market.steps.find(step => step.name === 'Verify every indexed version and the complete release batch')
   assert.match(verify.run, /--release-ref/u)
   assert.equal(verify.env.RELEASE_REF, '${{ inputs.release-ref }}')
+  assert.ok(ci.jobs.preflight.steps.some(step => step.uses === 'actions/checkout@v4'))
+  assert.match(ci.jobs.preflight.steps.find(step => step.id === 'ref').run, /parseReleaseTag/u)
 })

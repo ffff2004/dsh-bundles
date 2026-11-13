@@ -37,6 +37,10 @@ jobs:
     outputs:
       checkout-ref: ${{ steps.ref.outputs.checkout-ref }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release-ref || github.sha }}
+          persist-credentials: false
       - name: Validate immutable workflow inputs
         id: ref
         env:
@@ -46,12 +50,13 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import { appendFileSync } from 'node:fs';
+          import { parseReleaseTag } from './scripts/market-policy.mjs';
           const { VALIDATION_SHA, RELEASE_REF, RELEASE_TAGS, GITHUB_SHA, GITHUB_REF, GITHUB_OUTPUT } = process.env;
           if (VALIDATION_SHA && VALIDATION_SHA !== GITHUB_SHA) throw new Error('Release PR branch moved; dispatch validation again');
           if (RELEASE_REF) {
             if (GITHUB_REF !== 'refs/heads/main' || !/^[a-f0-9]{40}$/.test(RELEASE_REF)) throw new Error('Release calls require main and a full commit SHA');
             const tags = JSON.parse(RELEASE_TAGS);
-            if (!Array.isArray(tags) || tags.length === 0 || tags.some(tag => typeof tag !== 'string' || !tag.startsWith('@ffff2004-dsh-packages/'))) throw new Error('Release call requires its complete tag batch');
+            if (!Array.isArray(tags) || tags.length === 0 || tags.some(tag => typeof tag !== 'string' || !parseReleaseTag(tag))) throw new Error('Release call requires its complete tag batch');
           }
           appendFileSync(GITHUB_OUTPUT, `checkout-ref=${RELEASE_REF || GITHUB_SHA}\n`);
           JS

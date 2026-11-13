@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import semver from 'semver'
 import { parse } from 'yaml'
+import { isMarketPackageName, MARKET_SCOPE } from './market-policy.mjs'
 
 function git(cwd, args, allowed = [0]) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
@@ -79,6 +80,7 @@ export function planRelease({ cwd = process.cwd(), releaseRef, mainRef = 'refs/r
       }
       if (manifest.private !== true) throw new Error(`Release bundles must remain private: ${manifest.name}`)
       if (!consumed.has(manifest.name)) throw new Error(`Version change has no consumed changeset: ${manifest.name}`)
+      if (!isMarketPackageName(manifest.name)) throw new Error(`Bundle name is outside ${MARKET_SCOPE}: ${manifest.name}`)
       const tag = `${manifest.name}@${manifest.version}`
       git(cwd, ['check-ref-format', `refs/tags/${tag}`])
       packages.push({ name: manifest.name, version: manifest.version, previousVersion: before.version, path, tag })

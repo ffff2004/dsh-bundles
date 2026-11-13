@@ -5,7 +5,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { CACHE_POLICY } from './market-policy.mjs';
+import { CACHE_POLICY, MARKET_SCOPE } from './market-policy.mjs';
 import { fixture, manifest, NAME, SOURCE_URL } from './market-test-fixture.mjs';
 import { verifyMarket } from './market-verify.mjs';
 import { GENERATE_PATH, PATCHES, patchGenerateSource, prepareGenerator, UPSTREAM_SHA } from './prepare-market-generator.mjs';
@@ -20,6 +20,7 @@ test('minimal patch replaces only unique known anchors and namespaces all upstre
     assert.ok(patched.includes(after));
   }
   assert.match(patched, new RegExp(CACHE_POLICY, 'u'));
+  assert.ok(patched.includes(MARKET_SCOPE.replaceAll('/', '\\/')));
   assert.doesNotMatch(patched, /version: undefined|tag\.name === undefined/u);
   // Normal results and the last-success fallback both include the same policy version upstream.
   const key = version => createHash('sha256').update(JSON.stringify([version, SOURCE_URL])).digest('hex');

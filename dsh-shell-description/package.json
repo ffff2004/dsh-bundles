@@ -1,8 +1,14 @@
 {
-  "name": "@local/dsh-shell-description",
+  "name": "@ffff2004-dsh-packages/shell-description",
   "version": "1.0.3",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/dsh-shell-description",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "dsh-shell-description"
+  },
   "description": "Hide the description argument of one-shot bash and pwsh tools across agent presets.",
   "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "exports": {

@@ -1,4 +1,4 @@
-# @local/dsh-codex-live
+# @ffff2004-dsh-packages/codex-live
 
 一个 bundle，两半：Host half 注册一条新的 LLM route（默认 `codex-live`），模型表跟随本机 codex CLI 的状态，而不是构建时生成的 pi-ai catalog，请求用它自己的 ChatGPT token；浏览器半边在「设置 → Codex 额度」展示同一条 route 所用账号的额度与重置券。
 
@@ -75,7 +75,7 @@ tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 
 
 ## 验证
 
-在仓库根目录运行 `pnpm --filter @local/dsh-codex-live test`（或 `pnpm -r test`）：Host 侧覆盖投影、错误分类、60s 缓存与单飞、券详情降级、consume 串行化与四种 outcome；浏览器侧覆盖 manifest、单条顶层语句、两侧路径常量一致，以及百分比/日期/最近过期等纯函数。全部测试不联网，也不触发真实兑换。
+在仓库根目录运行 `pnpm --filter @ffff2004-dsh-packages/codex-live test`（或 `pnpm -r test`）：Host 侧覆盖投影、错误分类、60s 缓存与单飞、券详情降级、consume 串行化与四种 outcome；浏览器侧覆盖 manifest、单条顶层语句、两侧路径常量一致，以及百分比/日期/最近过期等纯函数。全部测试不联网，也不触发真实兑换。
 
 ## 已知取舍
 

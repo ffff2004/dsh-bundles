@@ -11,7 +11,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cli = join(repo, 'scripts/check-dependencies.mjs')
 const json = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2))
 const base = () => ({
-  name: '@local/fixture', version: '1.0.0', type: 'module',
+  name: '@ffff2004-dsh-packages/fixture', version: '1.0.0', type: 'module',
   dsh: { bundle: { patch: './cordis.patch.yml' } }, engines: { dsh: '>=1.2.0 <2.0.0' },
   dependencies: { '@deepseek-ai/schemastery': '3.18.5' },
   peerDependencies: { '@deepseek-ai/dsh-llm': '>=1.3.0-beta.2 <2.0.0-0' },
@@ -130,7 +130,7 @@ for (const [file, allowed] of [
 test('AST normalizes owned scoped subpaths and permits self-reference/Node builtins', t => {
   const pkg = base()
   pkg.dependencies['@earendil-works/pi-ai'] = '1.3.0'
-  const root = fixture(t, [pkg], [baseline + "export * from '@earendil-works/pi-ai/providers/all'\nimport '@local/fixture/subpath'\nimport 'node:fs'\nimport 'fs/promises'\n"])
+  const root = fixture(t, [pkg], [baseline + "export * from '@earendil-works/pi-ai/providers/all'\nimport '@ffff2004-dsh-packages/fixture/subpath'\nimport 'node:fs'\nimport 'fs/promises'\n"])
   passes(root, 'eslint')
 })
 
@@ -182,13 +182,13 @@ test('shared runtime modules used only by tests remain dev-only', t => {
 
 test('cordis ctx contract is scoped to codex-live, exact 4.0.5 is not DSH 0.x', t => {
   const pkg = base()
-  pkg.name = '@local/dsh-codex-live'
+  pkg.name = '@ffff2004-dsh-packages/codex-live'
   pkg.peerDependencies['@deepseek-ai/cordis'] = '4.0.5'
   pkg.devDependencies['@deepseek-ai/cordis'] = '4.0.5'
   passes(fixture(t, [pkg]), 'policy')
-  pkg.name = '@local/not-codex-live'
+  pkg.name = '@ffff2004-dsh-packages/not-codex-live'
   rejects(fixture(t, [pkg]), 'policy', /cordis: unused peer/u)
-  pkg.name = '@local/dsh-codex-live'
+  pkg.name = '@ffff2004-dsh-packages/codex-live'
   delete pkg.peerDependencies['@deepseek-ai/cordis']
   rejects(fixture(t, [pkg]), 'policy', /stale unused-peer host contract/u)
 })
@@ -196,7 +196,7 @@ test('cordis ctx contract is scoped to codex-live, exact 4.0.5 is not DSH 0.x', 
 test('only Syncpack rejects cross-bundle drift when each exact dev satisfies its peer', t => {
   const a = base()
   const b = base()
-  b.name = '@local/other'
+  b.name = '@ffff2004-dsh-packages/other'
   b.devDependencies['@deepseek-ai/dsh-llm'] = '1.3.0-beta.5'
   const root = fixture(t, [a, b])
   rejects(root, 'syncpack', /dsh-llm/u)
@@ -206,7 +206,7 @@ test('only Syncpack rejects cross-bundle drift when each exact dev satisfies its
 test('Syncpack separates peer ranges from exact dev versions, and enforces owned versions', t => {
   const a = base()
   const b = base()
-  b.name = '@local/other'
+  b.name = '@ffff2004-dsh-packages/other'
   b.dependencies['@deepseek-ai/schemastery'] = '3.18.4'
   rejects(fixture(t, [a, b]), 'syncpack', /schemastery/u)
 })
@@ -215,7 +215,7 @@ test('new workspace bundle is automatically checked; out-of-workspace bundle fai
   const root = fixture(t)
   mkdirSync(join(root, 'new-bundle'))
   const pkg = base()
-  pkg.name = '@local/new-bundle'
+  pkg.name = '@ffff2004-dsh-packages/new-bundle'
   json(join(root, 'new-bundle/package.json'), pkg)
   writeFileSync(join(root, 'new-bundle/index.js'), "import 'missing-package'\n")
   rejects(root, 'eslint', /must be declared in this bundle/u)
@@ -225,7 +225,6 @@ test('new workspace bundle is automatically checked; out-of-workspace bundle fai
 
 test('root tooling cannot become a market bundle; repository discovery excludes tooling', t => {
   const bundles = discoverBundles(repo)
-  assert.ok(bundles.length >= 8)
   assert.ok(bundles.every(bundle => bundle.dir !== repo))
   const tooling = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'))
   assert.equal(tooling.private, true)

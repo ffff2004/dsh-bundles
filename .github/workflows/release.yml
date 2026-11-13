@@ -1,0 +1,172 @@
+name: Release bundles
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release-ref:
+        description: 'Release commit on main to retry; leave empty to refresh the Release PR'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# No global concurrency queue: GitHub replaces pending runs, which could drop
+# an intermediate release commit and permanently skip its tags.
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      is-release: ${{ steps.plan.outputs.is-release }}
+      release-ref: ${{ steps.plan.outputs.release-ref }}
+      release-tags: ${{ steps.plan.outputs.release-tags }}
+    steps:
+      # Never execute scripts from workflow_dispatch's release-ref.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Identify only this commit's consumed changesets and version upgrades
+        id: plan
+        env:
+          RELEASE_REF: ${{ inputs.release-ref || github.sha }}
+        run: node scripts/release.mjs plan --release-ref "$RELEASE_REF"
+      - name: Reject retries without a valid release diff
+        if: github.event_name == 'workflow_dispatch' && inputs.release-ref != '' && steps.plan.outputs.is-release != 'true'
+        run: |
+          echo 'release-ref must identify a version upgrade with consumed changesets on main' >&2
+          exit 1
+
+  prepare:
+    needs: plan
+    # A release merge may still contain other pending changesets: prepare the
+    # next PR too. An explicit retry must not modify the Release PR.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release-ref == '')
+    # Only PR preparation may coalesce; stale contexts explicitly queue a fresh run.
+    concurrency:
+      group: bundle-release-pr
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # changesets/action resets to github.context.sha, ignoring checkout's HEAD.
+      # A stale run must dispatch a fresh context, not just skip: pending prepare
+      # jobs coalesce, so that could otherwise discard the final update request.
+      - name: Require current main context or queue a fresh run
+        id: fresh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          current="$(git ls-remote --exit-code origin refs/heads/main)"
+          read -r sha ref <<< "$current"
+          test "$ref" = 'refs/heads/main'
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+          if [ "$GITHUB_SHA" != "$sha" ]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/dispatches" -f ref=main
+            echo 'current=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Prepare independent private bundle versions (no npm publishing)
+        id: changesets
+        if: steps.fresh.outputs.current == 'true'
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          title: 'chore: release bundles'
+          commit: 'chore: release bundles'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      # GITHUB_TOKEN-created PRs do not emit pull_request CI runs. Dispatch a
+      # read-only branch run explicitly; CI checks validation-sha and cannot deploy.
+      - name: Explicitly validate the Release PR branch
+        if: steps.changesets.outputs.pullRequestNumber != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          jq -e --arg repo "$GITHUB_REPOSITORY" \
+            '.state == "open" and .base.ref == "main" and .head.repo.full_name == $repo' <<< "$pr" > /dev/null
+          ref="$(jq -er '.head.ref' <<< "$pr")"
+          sha="$(jq -er '.head.sha' <<< "$pr")"
+          actual="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$ref" --jq '.object.sha')"
+          test "$actual" = "$sha"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/dispatches" \
+            -f ref="$ref" -f "inputs[validation-sha]=$sha"
+          # A race is an error, never silently report a different head as checked.
+          actual="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$ref" --jq '.object.sha')"
+          test "$actual" = "$sha"
+
+  publish:
+    needs: plan
+    if: needs.plan.outputs.is-release == 'true' && (github.event_name == 'push' || inputs.release-ref != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      release-ref: ${{ steps.publish.outputs.release-ref }}
+      release-tags: ${{ steps.publish.outputs.release-tags }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate every tag, then atomically push only this release's tags
+        id: publish
+        env:
+          RELEASE_REF: ${{ needs.plan.outputs.release-ref }}
+        run: node scripts/release.mjs publish --release-ref "$RELEASE_REF"
+
+  market:
+    needs: publish
+    # GITHUB_TOKEN tag pushes do not trigger workflows; never depend on tag events.
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      release-ref: ${{ needs.publish.outputs.release-ref }}
+      release-tags: ${{ needs.publish.outputs.release-tags }}

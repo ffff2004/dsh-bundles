@@ -56,7 +56,7 @@ test('preview path client contract', async t => {
   let plugin
 
   await checkGroup(t, 'module registration and service injection', async check => {
-    check('module id', registration?.id === '@local/dsh-preview-path', registration?.id)
+    check('module id', registration?.id === '@ffff2004-dsh-packages/preview-path', registration?.id)
 
     plugin = registration.factory((specifier) => {
       if (specifier === 'react') return react
@@ -205,7 +205,7 @@ test('preview path client contract', async t => {
       needingCopy.map(row => `${row.options.name}:${row.options.locale}`).join(','))
 
     const body = registrations.find(row => row.options.name === 'sidebar.right.pane.tab')
-    check('body keyed by the type id', body?.options.key === '@local/dsh-preview-path/directory', body?.options.key)
+    check('body keyed by the type id', body?.options.key === '@ffff2004-dsh-packages/preview-path/directory', body?.options.key)
     check('body component', typeof body?.component === 'function')
     const injected = body.options.inject('session-1')
     check('body lists through the Remote', typeof injected.list === 'function')

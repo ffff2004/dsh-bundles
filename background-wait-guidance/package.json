@@ -1,8 +1,14 @@
 {
-  "name": "@local/dsh-background-wait-guidance",
+  "name": "@ffff2004-dsh-packages/background-wait-guidance",
   "version": "2.0.4",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/background-wait-guidance",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "background-wait-guidance"
+  },
   "description": "Independent jobs and subagent guidance plugins for yielding to background completion notifications.",
   "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "exports": {

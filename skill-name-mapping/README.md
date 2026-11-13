@@ -49,7 +49,7 @@ v1 的 `mappings`、`originalName`、别名 `name` 配置已移除；升级时 b
 ```sh
 # 在仓库根目录
 pnpm install
-pnpm --filter @local/dsh-skill-name-mapping test
+pnpm --filter @ffff2004-dsh-packages/skill-name-mapping test
 node --check index.js
 node --check discovery.js
 ```

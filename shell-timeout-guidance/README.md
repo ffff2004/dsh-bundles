@@ -10,9 +10,8 @@
 
 ## 使用与迁移
 
-- 包名：`@local/dsh-shell-timeout-guidance`；插件 ID：`shell-timeout-guidance`。
+- 包名：`@ffff2004-dsh-packages/shell-timeout-guidance`；插件 ID：`shell-timeout-guidance`。
 - 通过 Harness Plugin Manager 安装本目录作为 bundle，安装后默认启用；在管理器中启用或停用“Shell 超时指导 / Shell timeout guidance”。
-- 旧版本名为 `@local/dsh-bash-timeout-guidance`。迁移时先移除旧 bundle，再安装本目录，避免重复贡献提示。不要手改 profile 配置。
 - 修改已加载模块后通常需要重启 Harness，不能只依赖禁用再启用清除模块缓存。
 - 当前 profile 中使用可见 bash/pwsh 的所有模型都受这条提示影响，由用户决定何时启用。
 - 停用后，之后的 prompt assembly 不再贡献这段文字；已经记录的会话历史不被删除。

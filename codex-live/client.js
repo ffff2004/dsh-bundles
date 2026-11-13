@@ -586,7 +586,7 @@
   }
 
   window.__ModuleLoader__.load({
-    id: '@local/dsh-codex-live',
+    id: '@ffff2004-dsh-packages/codex-live',
     factory(require) {
       const React = require('react')
       const { Modal, Button } = require('@deepseek-ai/dsh-client-ui-primitives')

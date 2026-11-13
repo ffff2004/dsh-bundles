@@ -1,8 +1,14 @@
 {
-  "name": "@local/dsh-skill-name-mapping",
+  "name": "@ffff2004-dsh-packages/skill-name-mapping",
   "version": "2.0.2",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/skill-name-mapping",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "skill-name-mapping"
+  },
   "description": "Automatically discover local skills and lowercase ASCII uppercase names without modifying source files.",
   "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
   "exports": { ".": "./index.js", "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg" },

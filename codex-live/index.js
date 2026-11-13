@@ -33,7 +33,7 @@
  * Neither file is written, and nothing here talks to codex: the provider is
  * exactly as fresh as the last time the codex CLI ran.
  *
- * @module @local/dsh-codex-live
+ * @module @ffff2004-dsh-packages/codex-live
  */
 
 import { watch } from 'node:fs'

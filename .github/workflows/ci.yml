@@ -1,68 +1,99 @@
 name: Test bundles and publish plugin market
 
 on:
-  push:
-    # Match scoped and unscoped package tags; exact validity is checked below.
-    tags: ['**@*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      validation-sha:
+        description: Expected branch SHA for bot-created Release PR validation
+        type: string
+        required: false
+  workflow_call:
+    inputs:
+      release-ref:
+        description: Immutable release commit already tagged by release.yml
+        type: string
+        required: true
+      release-tags:
+        description: JSON array of all tags in this release batch
+        type: string
+        required: true
 
-# Keep publishing credentials out of the market job and pull requests.
 permissions:
   contents: read
 
+# Publish calls share one queue; PR checks cannot cancel a deployment.
 concurrency:
-  group: plugin-market-${{ github.event.pull_request.number || 'publish' }}
+  group: plugin-market-${{ github.event.pull_request.number || inputs.validation-sha || (inputs.release-ref && 'publish') || github.ref }}
   cancel-in-progress: false
 
 env:
-  # Update deliberately after testing a new reference generator revision.
+  # The adapter deliberately fails closed when this upstream revision changes.
   DSH_REF: 687f282e8625c6b8d11ff58211a90524be2e4317
 
 jobs:
-  test:
+  preflight:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    outputs:
+      checkout-ref: ${{ steps.ref.outputs.checkout-ref }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release-ref || github.sha }}
           persist-credentials: false
+      - name: Validate immutable workflow inputs
+        id: ref
+        env:
+          VALIDATION_SHA: ${{ inputs.validation-sha }}
+          RELEASE_REF: ${{ inputs.release-ref }}
+          RELEASE_TAGS: ${{ inputs.release-tags }}
+        run: |
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs';
+          import { parseReleaseTag } from './scripts/market-policy.mjs';
+          const { VALIDATION_SHA, RELEASE_REF, RELEASE_TAGS, GITHUB_SHA, GITHUB_REF, GITHUB_OUTPUT } = process.env;
+          if (VALIDATION_SHA && VALIDATION_SHA !== GITHUB_SHA) throw new Error('Release PR branch moved; dispatch validation again');
+          if (RELEASE_REF) {
+            if (GITHUB_REF !== 'refs/heads/main' || !/^[a-f0-9]{40}$/.test(RELEASE_REF)) throw new Error('Release calls require main and a full commit SHA');
+            const tags = JSON.parse(RELEASE_TAGS);
+            if (!Array.isArray(tags) || tags.length === 0 || tags.some(tag => typeof tag !== 'string' || !parseReleaseTag(tag))) throw new Error('Release call requires its complete tag batch');
+          }
+          appendFileSync(GITHUB_OUTPUT, `checkout-ref=${RELEASE_REF || GITHUB_SHA}\n`);
+          JS
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+  test:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
         with:
-          # Keep in step with the committed lockfile and local development.
+          ref: ${{ needs.preflight.outputs.checkout-ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
           version: 11.25.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint bundle dependencies and compatibility declarations
-        run: pnpm lint
-
-      - name: Test dependency checker against CLI fixtures
-        run: pnpm test:lint
-
-      - name: Run bundle tests
-        run: pnpm -r test
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test:lint
+      - run: pnpm test:release
+      - run: pnpm -r test
 
   market:
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.preflight.outputs.checkout-ref }}
+          fetch-depth: 0
           persist-credentials: false
-
       - name: Check out the reference generator
         uses: actions/checkout@v4
         with:
@@ -70,36 +101,33 @@ jobs:
           ref: ${{ env.DSH_REF }}
           path: .dsh-source
           persist-credentials: false
-
-      - name: Set up pnpm from the generator's packageManager
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
           package_json_file: .dsh-source/package.json
           run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: pnpm
           cache-dependency-path: .dsh-source/pnpm-lock.yaml
-
       - name: Install generator dependencies only
         working-directory: .dsh-source
         run: pnpm --filter '@deepseek-ai/dsh-plugin-market-generator...' install --frozen-lockfile --ignore-scripts
-
-      - name: Create temporary source list for this repository
+      - name: Test the adapter against the real pinned generator
+        env:
+          MARKET_GENERATOR_CHECKOUT: ${{ github.workspace }}/.dsh-source
+        run: node --test scripts/market*.test.mjs
+      - name: Apply the pinned tags-only adapter
+        run: node scripts/prepare-market-generator.mjs --checkout .dsh-source
+      - name: Create temporary source list
         run: printf '%s/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/plugin-market-sources.txt"
-
-      - name: Restore generator cache
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: .plugin-market-cache
-          key: plugin-market-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: plugin-market-tags-only-v1-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            plugin-market-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-
-
-      - name: Generate index and icons
+            plugin-market-tags-only-v1-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-
+      - name: Generate tags-only index and icons
         working-directory: .dsh-source
         run: |
           pnpm --filter @deepseek-ai/dsh-plugin-market-generator start \
@@ -108,38 +136,27 @@ jobs:
             --cache "$GITHUB_WORKSPACE/.plugin-market-cache" \
             --title 'ffff2004 DSH Bundles' \
             --description 'Personal DeepSeek Harness bundles by ffff2004'
-
-      # A source failure already exits nonzero. Reject empty results and tag
-      # pushes that the generator did not include at the tagged commit.
-      - name: Validate generated market and release tag
+      - name: Verify every indexed version and the complete release batch
+        env:
+          RELEASE_TAGS: ${{ inputs.release-tags || '[]' }}
+          RELEASE_REF: ${{ inputs.release-ref }}
         run: |
-          node --input-type=module <<'JS'
-          import { execFileSync } from 'node:child_process';
-          import { readFileSync } from 'node:fs';
-          const index = JSON.parse(readFileSync('_site/index.json', 'utf8'));
-          if (!Array.isArray(index.plugins) || index.plugins.length === 0) {
-            throw new Error('Refusing to publish an empty plugin market');
-          }
-          if (process.env.GITHUB_EVENT_NAME === 'push') {
-            const tag = process.env.GITHUB_REF_NAME;
-            const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-            const included = index.plugins.some(plugin => plugin.versions.some(version =>
-              `${plugin.name}@${version.version}` === tag
-              && version.source.type === 'git' && version.source.commit === commit));
-            if (!included) {
-              throw new Error(`Release tag ${tag} was not indexed at ${commit}; use <package-name>@<version> matching the bundle manifest`);
-            }
-          }
-          console.log(`Validated market: ${index.plugins.length} plugins`);
-          JS
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync(process.env.RUNNER_TEMP + "/release-tags.json", JSON.stringify(JSON.parse(process.env.RELEASE_TAGS)))'
+          mode=pr-bootstrap
+          if [ -n "$RELEASE_REF" ]; then mode=deploy; fi
+          args=(
+            --index _site/index.json --repo .
+            --source-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+            --mode "$mode" --expect-tags-file "$RUNNER_TEMP/release-tags.json"
+          )
+          if [ -n "$RELEASE_REF" ]; then args+=(--release-ref "$RELEASE_REF"); fi
+          node scripts/market-verify.mjs "${args[@]}"
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    if: inputs.release-ref != '' && github.ref == 'refs/heads/main'
     needs: [market, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -150,9 +167,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Deploy market
-        id: deployment
+      - uses: actions/configure-pages@v5
+      - id: deployment
         uses: actions/deploy-pages@v4

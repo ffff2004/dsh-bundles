@@ -3,8 +3,8 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { Context, Service } from '@deepseek-ai/cordis'
 import SystemPrompt, { renderPrompt, renderContextSnapshot } from '@deepseek-ai/dsh-system-prompt'
-import * as jobsPlugin from '@local/dsh-background-wait-guidance/jobs'
-import * as subagentsPlugin from '@local/dsh-background-wait-guidance/subagents'
+import * as jobsPlugin from '@ffff2004-dsh-packages/background-wait-guidance/jobs'
+import * as subagentsPlugin from '@ffff2004-dsh-packages/background-wait-guidance/subagents'
 
 class Tools extends Service {
   constructor(ctx) {
@@ -56,13 +56,13 @@ test('bundle exposes two plugin rows and localized display resources', async () 
   assert.doesNotMatch(patch, /jobsWaitMode/)
   for (const kind of ['jobs', 'subagents']) {
     assert.ok(patch.includes(`id: background-wait-${kind}`))
-    assert.ok(patch.includes(`name: '@local/dsh-background-wait-guidance/${kind}'`))
+    assert.ok(patch.includes(`name: '@ffff2004-dsh-packages/background-wait-guidance/${kind}'`))
     assert.ok(manifest.files.includes(`${kind}.js`))
-    const icon = await readFile(new URL(import.meta.resolve(`@local/dsh-background-wait-guidance/${kind}/icon`)), 'utf8')
+    const icon = await readFile(new URL(import.meta.resolve(`@ffff2004-dsh-packages/background-wait-guidance/${kind}/icon`)), 'utf8')
     assert.match(icon, /<svg\s/)
     for (const language of ['en', 'zh']) {
       const locale = JSON.parse(await readFile(new URL(import.meta.resolve(
-        `@local/dsh-background-wait-guidance/${kind}/locale/${language}.json`,
+        `@ffff2004-dsh-packages/background-wait-guidance/${kind}/locale/${language}.json`,
       )), 'utf8'))
       for (const field of ['title', 'description']) {
         const value = locale.meta[field]

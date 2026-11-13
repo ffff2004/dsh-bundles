@@ -21,7 +21,7 @@
 - `GITHUB_TOKEN` 产生的 PR/tag 不会自动触发常规 PR/push 工作流。因此 Release PR 更新后显式 dispatch CI（校验预期 SHA），打 tag 后显式调用可复用 CI；不依赖隐式事件，无需 PAT/App secret。Release PR 的检查运行在 Actions 中，合并前应核对对应 SHA 的结果。
 - 普通 PR、手动 dispatch CI 只校验和上传 artifact，不部署；发布与部署重试统一从 `main` 的发布工作流进入。完整批次 tags 创建之后才生成一次索引，避免逐 tag 部署半批次。
 - [适配器](<scripts/prepare-market-generator.mjs>) 仅在临时 checkout 上调整固定上游版本：去掉 HEAD 与统一 tag 候选、限定新 scope，并隔离正常及失败回退缓存。锚点/源码变化即失败；升级上游必须同时更新适配器和测试。保留官方格式、图标和兼容声明校验，不直接升级至会过滤私有包的新上游。
-- [独立校验器](<scripts/market-verify.mjs>) 对照 Git tags、commit 及对应 manifest 验证每个索引版本和本批所有 tags。任一源读取失败、版本缺失、错误引用或发布索引为空时均不部署，保留线上旧版本。首次尚无新 scope tag 时，仅允许 PR/只读校验产生空索引。
+- [独立校验器](<scripts/market-verify.mjs>) 对照 Git tags、commit 及对应 manifest 验证每个索引版本和本批所有 tags；发布调用还要求本批 tags 全部指向发布提交 `R`，历史版本只校验与各自 tag 自洽。任一源读取失败、版本缺失、错误引用或发布索引为空时均不部署，保留线上旧版本。首次尚无新 scope tag 时，仅允许 PR/只读校验产生空索引。
 - 上游仍从默认分支发现包目录；历史包改名、删除或搬目录需要专门迁移，tags-only 不提供跨目录的完整历史发现。
 
 ## 首次启用与失败重试

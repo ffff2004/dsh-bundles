@@ -30,6 +30,20 @@ test('checks each release, including annotated tags and expected release batch',
   assert.throws(() => verify(f.repo, indexAt(f.first), { expectedTags: ['v1.0.0'] }), /Expected tags/u);
 });
 
+test('release-ref anchors expected batch tags to the release commit', t => {
+  const f = fixture(t);
+  f.git('tag', '-a', TAG, '-m', 'release');
+  assert.equal(verify(f.repo, indexAt(f.first), { expectedTags: [TAG], releaseRef: f.first }).versions, 1);
+  f.write('readme', 'next commit');
+  const second = f.commit();
+  f.git('tag', '-f', '-a', TAG, second, '-m', 'moved');
+  assert.throws(() => verify(f.repo, indexAt(second), { expectedTags: [TAG], releaseRef: f.first }),
+    /not release commit/u);
+  assert.equal(verify(f.repo, indexAt(second), { expectedTags: [TAG], releaseRef: second }).versions, 1);
+  assert.throws(() => verify(f.repo, indexAt(second), { expectedTags: [TAG], releaseRef: 'main' }), /full commit SHA/u);
+  assert.throws(() => verify(f.repo, indexAt(second), { releaseRef: second }), /at least one expected release tag/u);
+});
+
 test('rejects HEAD-only, unified-only, and old-scope releases', t => {
   const f = fixture(t);
   f.git('tag', 'v1.0.0');
@@ -89,6 +103,11 @@ test('real CLI checks expected-tags JSON and has fail-closed explicit modes', t 
   assert.equal(run('--mode', 'deploy').status, 0);
   assert.equal(run().status, 1);
   assert.equal(run('--mode', 'deploy', '--expect-tag', `${NAME}@2.0.0`).status, 1);
+  f.write('readme', 'next commit');
+  const second = f.commit();
+  assert.equal(run('--mode', 'deploy', '--release-ref', f.first).status, 0);
+  assert.equal(run('--mode', 'deploy', '--release-ref', second).status, 1);
+  assert.match(run('--mode', 'deploy', '--release-ref', 'main').stderr, /full commit SHA/u);
   writeFileSync(expected, '{}');
   assert.match(run('--mode', 'deploy').stderr, /JSON array/u);
 });

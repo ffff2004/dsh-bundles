@@ -375,4 +375,8 @@ test('workflow keeps trusted main execution, token permissions, explicit PR disp
   assert.equal(workflow.jobs.market.uses, './.github/workflows/ci.yml')
   assert.equal(workflow.jobs.market.with['release-ref'], '${{ needs.publish.outputs.release-ref }}')
   assert.equal(workflow.jobs.market.with['release-tags'], '${{ needs.publish.outputs.release-tags }}')
+  const ci = parse(readFileSync(join(repo, '.github/workflows/ci.yml'), 'utf8'))
+  const verify = ci.jobs.market.steps.find(step => step.name === 'Verify every indexed version and the complete release batch')
+  assert.match(verify.run, /--release-ref/u)
+  assert.equal(verify.env.RELEASE_REF, '${{ inputs.release-ref }}')
 })

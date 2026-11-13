@@ -139,10 +139,13 @@ jobs:
           node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync(process.env.RUNNER_TEMP + "/release-tags.json", JSON.stringify(JSON.parse(process.env.RELEASE_TAGS)))'
           mode=pr-bootstrap
           if [ -n "$RELEASE_REF" ]; then mode=deploy; fi
-          node scripts/market-verify.mjs \
-            --index _site/index.json --repo . \
-            --source-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+          args=(
+            --index _site/index.json --repo .
+            --source-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
             --mode "$mode" --expect-tags-file "$RUNNER_TEMP/release-tags.json"
+          )
+          if [ -n "$RELEASE_REF" ]; then args+=(--release-ref "$RELEASE_REF"); fi
+          node scripts/market-verify.mjs "${args[@]}"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

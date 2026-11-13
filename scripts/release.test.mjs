@@ -368,7 +368,7 @@ test('workflow keeps trusted main execution, token permissions, explicit PR disp
   const retryGuard = workflow.jobs.plan.steps.find(step => step.name === 'Reject retries without a valid release diff')
   assert.equal(retryGuard.if, "github.event_name == 'workflow_dispatch' && inputs.release-ref != '' && steps.plan.outputs.is-release != 'true'")
   for (const name of ['plan', 'prepare', 'publish']) {
-    const checkout = workflow.jobs[name].steps.find(step => step.uses === 'actions/checkout@v4')
+    const checkout = workflow.jobs[name].steps.find(step => step.uses === 'actions/checkout@v7')
     assert.equal(checkout.with.ref, 'main')
   }
   const action = workflow.jobs.prepare.steps.find(step => step.uses === 'changesets/action@v1')
@@ -384,6 +384,6 @@ test('workflow keeps trusted main execution, token permissions, explicit PR disp
   const verify = ci.jobs.market.steps.find(step => step.name === 'Verify every indexed version and the complete release batch')
   assert.match(verify.run, /--release-ref/u)
   assert.equal(verify.env.RELEASE_REF, '${{ inputs.release-ref }}')
-  assert.ok(ci.jobs.preflight.steps.some(step => step.uses === 'actions/checkout@v4'))
+  assert.ok(ci.jobs.preflight.steps.some(step => step.uses === 'actions/checkout@v7'))
   assert.match(ci.jobs.preflight.steps.find(step => step.id === 'ref').run, /parseReleaseTag/u)
 })

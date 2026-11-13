@@ -37,7 +37,7 @@ jobs:
     outputs:
       checkout-ref: ${{ steps.ref.outputs.checkout-ref }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release-ref || github.sha }}
           persist-credentials: false
@@ -66,15 +66,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.checkout-ref }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.25.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -89,23 +89,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.checkout-ref }}
           fetch-depth: 0
           persist-credentials: false
       - name: Check out the reference generator
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: deepseek-ai/deepseek-harness
           ref: ${{ env.DSH_REF }}
           path: .dsh-source
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: .dsh-source/package.json
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -121,7 +121,7 @@ jobs:
         run: node scripts/prepare-market-generator.mjs --checkout .dsh-source
       - name: Create temporary source list
         run: printf '%s/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/plugin-market-sources.txt"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .plugin-market-cache
           key: plugin-market-tags-only-v1-${{ runner.os }}-${{ github.repository }}-${{ env.DSH_REF }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -151,7 +151,7 @@ jobs:
           )
           if [ -n "$RELEASE_REF" ]; then args+=(--release-ref "$RELEASE_REF"); fi
           node scripts/market-verify.mjs "${args[@]}"
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
@@ -167,6 +167,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

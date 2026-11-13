@@ -1,20 +1,12 @@
 place local DSH (DeepSeek Harness) bundles here.
 
-当文档（包括 `AGENTS.md` 、根/子 `README.md` 等）过时时，及时更新
-
 如有需要，可以参考本地 DSH 源码 checkout。
 
-use conventional commit `<type>[(<bundle-name>)]: ...`
-
-修改 bundle 用户可见行为或编写变更集（changeset）时，先读[Changesets 约定](<.changeset/README.md>)。
-
-维护版本发布、CI/Pages 或本地生成市场索引时，先读[发布说明](<plugin-market-publishing.md>)。
-
-新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
+use conventional commit `<type>[(<bundle-name>)]: ...`.
 
 ## 包名 scope
 
-bundle 的 `package.json` `name` 使用 `@ffff2004-dsh-packages/<名称>`，省略 `dsh-` 前缀；源码目录不必同名。`pnpm lint` 会拒绝 scope 不符的名称，发布脚本在创建 tag 前也会校验。旧 `@local/dsh-*` 身份不提供兼容入口。
+bundle 的 `package.json` `name` 使用 `@ffff2004-dsh-packages/<名称>`；源码目录不必同名。`pnpm lint` 会拒绝 scope 不符的名称，发布脚本在创建 tag 前也会校验。
 
 ## 本地开发
 
@@ -30,8 +22,14 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 
 所有 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @ffff2004-dsh-packages/shell-description test`。
 
-测试源码放在 bundle 根 `test/`、`tests/`、`__tests__/`（含其中子目录）或根 `*.test.js/mjs/cjs`。只有这些位置可使用 dev-only 依赖；其它位置（包括 `src/tests/`、`src/*.test.*`）按生产源码检查。
+## 文档
 
-新增 bundle，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<dependency-policy.md>)。新增共享实例包或 unused peer 例外时，在显式策略中记录分类或宿主契约原因，并补 CLI 正反例。
+当文档（包括 `AGENTS.md` 、根/子 `README.md` 等）过时时，及时更新。
 
-新增或移动 bundle 目录时检查 [workspace globs](<pnpm-workspace.yaml>) 覆盖情况；lint 会拒绝未覆盖的 bundle。根包仅承载开发工具，保持 private 且不声明 `dsh.bundle`，以免改变市场发现优先级。
+修改 bundle 用户可见行为或编写 changeset/changelog 时，先读[Changesets 约定](<.changeset/README.md>)。
+
+维护版本发布、CI/Pages 或本地生成市场索引时，先读[发布说明](<plugin-market-publishing.md>)。
+
+新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
+
+新增 bundle 及测试，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<dependency-policy.md>)。

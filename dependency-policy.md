@@ -26,9 +26,9 @@
 2. [ESLint 配置](<eslint.config.mjs>)：按每个 bundle 自己的 manifest 配置现成 `no-extraneous-dependencies`；适配局部 `require` 遮蔽，并复用语义检查器的测试位置分类。补充声明检查，防止现成规则因包尚未安装/无法解析而漏报，禁止根依赖或生产 dev-only 兜底。
 3. [薄语义检查器](<scripts/check-dependencies.mjs>)：有效 engines 范围、显式共享实例分类、peer/dev 配对、精确 dev 与满足关系、unused peer/宿主契约例外、发现保护及禁止 `@deepseek-ai/dsh` peer。仅验证每个 bundle 的语义关系，不重复 Syncpack 的跨包一致性检查；使用 ESLint 的 AST/scopes 收集源码 import，不自行解析 JavaScript。
 
-[策略定义](<scripts/dependency-policy.mjs>) 是分类和例外的单一来源。schemastery 属于无状态自有依赖，不因 `@deepseek-ai/` scope 被升级为 peer。Cordis 的唯一 unused peer 例外限定在 codex-live：宿主通过 `apply(ctx)` 提供 Cordis 契约；其它 bundle 同名 peer 或仅测试 import 不享受例外。陈旧例外也报错。
+[策略定义](<scripts/dependency-policy.mjs>) 是分类和例外的单一来源。schemastery 属于无状态自有依赖，不因 `@deepseek-ai/` scope 被升级为 peer。
 
-新增 bundle 被 workspace globs 自动纳入；独立扫描发现未被 workspace 覆盖的 bundle 时失败。根 [工具 manifest](<package.json>) 不含 `dsh.bundle`，所以市场不会把根当作 bundle，也不会优先选择根而遮蔽子目录；[CLI 测试](<scripts/dependencies.test.mjs>) 验证这一保护。
+新增 bundle 被 [workspace globs](<pnpm-workspace.yaml>) 自动纳入；新增或移动 bundle 目录时检查其覆盖情况；独立扫描发现未被 workspace 覆盖的 bundle 时失败。根 [工具 manifest](<package.json>) 不含 `dsh.bundle`，所以市场不会把根当作 bundle，也不会优先选择根而遮蔽子目录；[CLI 测试](<scripts/dependencies.test.mjs>) 验证这一保护。
 
 ## 源码检查边界
 
@@ -36,7 +36,6 @@
 - 仅 bundle 根 `test/`、`tests/`、`__tests__/`（含其中子目录）及根 `*.test.js/mjs/cjs` 可使用 devDependencies。其它位置（包括 `src/tests/`、`src/__tests__/`、`src/*.test.*` 与非测试名自检脚本）按生产源码处理。现成 ESLint 规则、声明补洞与语义 import collector 共用 `isTestFile` 分类，不各自维护 glob。peer 使用量只计生产 import；仅测试的宿主模块保持 dev-only。
 - 浏览器 `factory(require)` 的局部 loader 不是 Node require。现有 client 中的 React 由宿主 ModuleLoader 提供，不因此追加 npm runtime peer。
 - 非字面量动态加载、`createRequire`/`require.resolve` 的别名或包装、模板字面量、YAML 内嵌 JavaScript、客户端 loader/服务名注入不做依赖推导；修改这些加载路径时需人工核查。检查不验证 exports 子路径存在性、相对文件可达性、传递依赖或打包产物，也不分析 TypeScript/JSX。
-- 本轮不实施 composition/schema 或文档契约 lint；现有行为测试及 lean-preset 的 schema 测试依赖保持不变。
 
 ## 验证
 

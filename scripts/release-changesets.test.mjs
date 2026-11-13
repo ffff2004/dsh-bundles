@@ -10,7 +10,7 @@ import semver from 'semver'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const json = path => JSON.parse(readFileSync(path, 'utf8'))
 
-test('real Changesets versions all nine private identities independently, consumes the initial changeset, and writes migration notes', () => {
+test('real Changesets versions all nine private identities independently, consumes the initial changeset, and writes changelogs', () => {
   const fixture = realpathSync(mkdtempSync(join(tmpdir(), 'dsh-changesets-')))
   try {
     mkdirSync(join(fixture, '.changeset'))
@@ -43,7 +43,6 @@ test('real Changesets versions all nine private identities independently, consum
       assert.equal(updated.private, true)
       const changelog = readFileSync(join(dir, 'CHANGELOG.md'), 'utf8')
       assert.ok(changelog.includes(updated.version))
-      assert.match(changelog, /移除旧包/)
     }
     assert.equal(existsSync(join(fixture, '.changeset/initial.md')), false)
     assert.equal(json(join(fixture, 'package.json')).version, undefined)

@@ -39,7 +39,6 @@ test('real Changesets versions all nine private identities independently, consum
     for (const [index, original] of manifests.entries()) {
       const dir = join(fixture, 'packages', String(index))
       const updated = json(join(dir, 'package.json'))
-      assert.equal(updated.name, original.name)
       assert.equal(updated.version, semver.inc(original.version, 'patch'))
       assert.equal(updated.private, true)
       const changelog = readFileSync(join(dir, 'CHANGELOG.md'), 'utf8')

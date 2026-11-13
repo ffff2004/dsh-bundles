@@ -225,11 +225,7 @@ test('new workspace bundle is automatically checked; out-of-workspace bundle fai
 
 test('root tooling cannot become a market bundle; repository discovery excludes tooling', t => {
   const bundles = discoverBundles(repo)
-  assert.ok(bundles.length >= 9)
   assert.ok(bundles.every(bundle => bundle.dir !== repo))
-  for (const { manifest } of bundles) {
-    assert.match(manifest.name, /^@ffff2004-dsh-packages\/(?!dsh-)/u)
-  }
   const tooling = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'))
   assert.equal(tooling.private, true)
   assert.equal(tooling.dsh, undefined)

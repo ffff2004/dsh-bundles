@@ -1,6 +1,0 @@
-{
-  "meta": {
-    "title": "Lean Cordis tool ordering",
-    "description": "Moves the four Cordis-only tools after common tools within lean-cordis, preserving relative order."
-  }
-}

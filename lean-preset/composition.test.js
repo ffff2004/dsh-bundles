@@ -3,7 +3,6 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 import { Config as agentInstructionsConfig } from '@deepseek-ai/dsh-agent-instructions'
-import { Config as presentationConfig } from '@deepseek-ai/dsh-agent-tool-presentation'
 import { resolveConfig as resolvePrunerConfig } from '@deepseek-ai/dsh-compaction-tool-result-pruner'
 import { Config as personaConfig } from '@deepseek-ai/dsh-persona'
 import { Config as skillFilesystemConfig } from '@deepseek-ai/dsh-skill-filesystem'
@@ -11,8 +10,6 @@ import { Config as toolSubagentConfig } from '@deepseek-ai/dsh-tool-subagent'
 import { Config as toolWebConfig } from '@deepseek-ai/dsh-tool-web'
 import Schema from '@deepseek-ai/schemastery'
 import { parseDocument } from 'yaml'
-
-import { apply } from './tool-order.js'
 
 // Preserve Loader expressions as inert values: tests must not evaluate !!js.
 const document = parseDocument(await readFile(new URL('./cordis.patch.yml', import.meta.url), 'utf8'), {
@@ -23,7 +20,7 @@ assert.deepEqual(document.warnings, [])
 const patches = document.toJS()
 const declarations = patches.flatMap(patch => patch.insert ?? [])
 const preset = id => declarations.find(row => row.config.id === id)
-const presentationName = '@deepseek-ai/dsh-agent-tool-presentation'
+const ptcExecutorName = '@deepseek-ai/dsh-tool-executor-ptc'
 
 function checkIds(rows) {
   assert.equal(new Set(rows.map(row => row.id)).size, rows.length)
@@ -49,24 +46,29 @@ test('only inserts three independent preset declarations, without changing defau
   assert.equal(preset('lean-ptc').config.order, 7)
 })
 
-test('lean-ptc has exactly the lean composition plus official PTC presentation', () => {
+test('lean-ptc has exactly the lean composition plus the PTC executor', () => {
   const base = preset('lean').config.plugins
   const ptc = preset('lean-ptc').config.plugins
-  assert.deepEqual(ptc.filter(row => row.name !== presentationName), base)
-  assert.deepEqual(ptc.filter(row => row.name === presentationName), [{
-    id: 'tool-presentation',
-    name: presentationName,
-    config: { mode: 'ptc' },
+  assert.deepEqual(ptc.filter(row => row.name !== ptcExecutorName), base)
+  assert.deepEqual(ptc.filter(row => row.name === ptcExecutorName), [{
+    id: 'tool-executor-ptc',
+    name: ptcExecutorName,
   }])
   for (const id of ['lean', 'lean-cordis']) {
-    assert.equal(preset(id).config.plugins.some(row => row.name === presentationName), false)
+    assert.equal(preset(id).config.plugins.some(row => row.name === ptcExecutorName), false)
   }
 })
 
-test('only lean-cordis mounts the Cordis tool-order policy', () => {
+test('rows removed for DSH 0.2.2 stay removed', () => {
   for (const row of declarations) {
-    const policies = row.config.plugins.filter(plugin => plugin.name === '@ffff2004-dsh-packages/lean-preset/tool-order')
-    assert.equal(policies.length, row.config.id === 'lean-cordis' ? 1 : 0)
+    const plugins = row.config.plugins
+    assert.equal(plugins.some(plugin => plugin.name === '@deepseek-ai/dsh-tool-subagent-control/list-agents'), false)
+    assert.equal(plugins.some(plugin => plugin.id === 'tool-subagent-list-agents'), false)
+    assert.equal(plugins.some(plugin => plugin.name === '@ffff2004-dsh-packages/lean-preset/tool-order'), false)
+    const subagent = plugins.find(plugin => plugin.name === '@deepseek-ai/dsh-tool-subagent')
+    assert.equal('modelSelectionSettings' in subagent.config, false)
+    assert.equal(subagent.config.modelSelection, true)
+    assert.equal(subagent.config.modelDiscovery, true)
   }
 })
 
@@ -78,11 +80,6 @@ test('PTC keeps compaction providers and consumers in the same isolated group', 
   assert.deepEqual(group.config.map(row => row.id), ['compaction-basic', 'command-compact', 'tool-result-pruner'])
 })
 
-test('package export ./tool-order resolves to the implemented plugin', async () => {
-  const plugin = await import('@ffff2004-dsh-packages/lean-preset/tool-order')
-  assert.equal(plugin.apply, apply)
-})
-
 // Upstream schema contracts for the config rows these presets mount. Each
 // `Config` export is a schemastery schema: resolving a row config with
 // `strict = true` drops every key the schema does not declare, so a key that
@@ -90,7 +87,6 @@ test('package export ./tool-order resolves to the implemented plugin', async () 
 // the upstream package no longer supports.
 const configSchemas = new Map([
   ['@deepseek-ai/dsh-agent-instructions', agentInstructionsConfig],
-  ['@deepseek-ai/dsh-agent-tool-presentation', presentationConfig],
   ['@deepseek-ai/dsh-persona', personaConfig],
   ['@deepseek-ai/dsh-skill-filesystem', skillFilesystemConfig],
   ['@deepseek-ai/dsh-tool-subagent', toolSubagentConfig],

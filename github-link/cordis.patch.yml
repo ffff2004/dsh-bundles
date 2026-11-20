@@ -1,0 +1,3 @@
+- insert:
+    - id: github-link
+      name: '@ffff2004-dsh-packages/github-link'

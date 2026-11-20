@@ -1,6 +1,6 @@
 # @ffff2004-dsh-packages/codex-live
 
-一个 bundle，两半：Host half 注册一条新的 LLM route（默认 `codex-live`），模型表跟随本机 codex CLI 的状态，而不是构建时生成的 pi-ai catalog，请求用它自己的 ChatGPT token；浏览器半边在「设置 → Codex 额度」展示同一条 route 所用账号的额度与重置券。
+复用本地 Codex 的登录状态（`auth.json`）和模型缓存（`models_cache.json`），为 DSH 提供 Codex GPT 模型。
 
 ![模型选择器里的 OpenAI Codex (live) 分组](docs/model-picker.png)
 
@@ -13,9 +13,7 @@
 
 ## 缓存复用动机与限制
 
-pi-ai 原本将请求的 `sessionId` 用作 `prompt_cache_key`，相当于按会话分组。根据上述 OpenAI API 文档，GPT-5.6+ 自动处理缓存路由，key 主要用于分开缓存核算；本部署没有这种隔离需求，因此省略 key，避免不必要的会话级分组，可能有利于跨 session 复用相同前缀。它不是缓存开关，也不会让不同内容共享 KV 状态。
-
-这不是已验证的命中率提升：仍需满足完整渲染前缀匹配、可用的缓存断点、缓存存续及模型设置一致等条件。此 route 使用 ChatGPT 后端，而非文档中的 OpenAI API，实际缓存语义与收益需通过真实请求观测；单元测试只验证请求改写。
+pi-ai 原本将请求的 `sessionId` 用作 `prompt_cache_key`，相当于按会话分组。根据上述 OpenAI API 文档，GPT-5.6+ 自动处理缓存路由，key 主要用于分开缓存核算；本部署没有这种隔离需求，因此省略 key，避免不必要的会话级分组，可能有利于跨 session 复用相同前缀。
 
 ## 设置页：Codex 额度
 
@@ -23,17 +21,9 @@ Browser half 注册 `settings.section`（`id: codex-quota`、`order: -5`，紧�
 
 ![设置 → Codex 额度：plan 与 email、两条额度窗口（进度条按已用填充、文字按剩余）、折叠的重置券](docs/quota-page.png)
 
-「使用」的二次确认（剩余百分比与列表同一口径，券的到期时间同样在 7 天内转 warn 色）：
-
 ![使用重置券的二次确认对话框：当前各窗口的剩余百分比、券到期时间、不可撤销](docs/reset-credit-confirm.png)
 
-页面：
-
-- 打开时读一次，不轮询、不在 focus 时刷新；「刷新」强制绕过缓存，并显示 `更新于 HH:mm:ss`。
-- 重置时间取上游 `reset_at`（缺失时用 `reset_after_seconds` 推算）：同一本地日只显示 `HH:mm`，跨日显示 `M 月 D 日 HH:mm`。
-- 「使用」弹 Modal 二次确认，文案带当前各窗口的剩余百分比、券到期时间与不可撤销提示；确认的券不是最早那张时，追加「还有更早过期的券（…）」提示。
-
-tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 403；页面会显示 email 与（仅在错误态的）本机凭据路径，这是「tailnet 可信」前提下的有意选择。
+远程：两条路由只对 owner principal 开放，非 owner 一律 403；页面会显示 email 与（仅在错误态的）本机凭据路径，这是「用户可信」前提下的有意选择。
 
 ## 为什么不是改 `llm-pi-ai` 配置
 
@@ -48,7 +38,7 @@ tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 
 
 | 事实 | 来源 |
 |---|---|
-| 模型清单 | `<codexHome>/models_cache.json`（codex CLI 每次运行时刷新） |
+| 模型缓存 | `<codexHome>/models_cache.json`（codex CLI 每次运行时刷新） |
 | 名称、上下文窗口、模态、reasoning 档位 | 上面的 codex 条目 |
 | compat、inputLimits、maxTokens 模板 | 已安装 pi-ai catalog 的同族兄弟（默认最长公共前缀 + codex priority 择优） |
 | Bearer token | `<codexHome>/auth.json` 的 `tokens.access_token`（回退 `OPENAI_API_KEY`） |
@@ -72,10 +62,6 @@ tailnet / 远程：两条路由只对 owner principal 开放，非 owner 一律 
 | `contextWindow` | `{}` | 按 id 覆盖上下文窗口 |
 | `tokenRef` | `''` | codex home 里没有 token 时回退的 credentials 引用 |
 | `watch` | `true` | codex 重写状态后自动重建（1.5s 合并窗口，内容未变不重注册） |
-
-## 验证
-
-在仓库根目录运行 `pnpm --filter @ffff2004-dsh-packages/codex-live test`（或 `pnpm -r test`）：Host 侧覆盖投影、错误分类、60s 缓存与单飞、券详情降级、consume 串行化与四种 outcome；浏览器侧覆盖 manifest、单条顶层语句、两侧路径常量一致，以及百分比/日期/最近过期等纯函数。全部测试不联网，也不触发真实兑换。
 
 ## 已知取舍
 

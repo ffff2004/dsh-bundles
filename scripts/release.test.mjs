@@ -275,9 +275,6 @@ if (process.env.GH_TEST_MODE === 'redispatch-error') process.exit(1)
     if (mode === 'remote-error') f.git('remote', 'set-url', 'origin', join(f.cwd, 'missing-remote'))
     const workflow = parse(readFileSync(join(repo, '.github/workflows/release.yml'), 'utf8'))
     const gate = workflow.jobs.prepare.steps.find(step => step.id === 'fresh')
-    const action = workflow.jobs.prepare.steps.find(step => step.uses === 'changesets/action@v1')
-    assert.equal(action.if, "steps.fresh.outputs.current == 'true'")
-    assert.ok(workflow.jobs.prepare.steps.indexOf(gate) < workflow.jobs.prepare.steps.indexOf(action))
     const result = spawnSync('bash', ['-c', gate.run], {
       cwd: f.cwd, encoding: 'utf8', env: {
         ...process.env, PATH: `${bin}:${process.env.PATH}`, GITHUB_REPOSITORY: 'example/repo',
@@ -371,11 +368,16 @@ test('workflow keeps trusted main execution, token permissions, explicit PR disp
     const checkout = workflow.jobs[name].steps.find(step => step.uses === 'actions/checkout@v7')
     assert.equal(checkout.with.ref, 'main')
   }
-  const action = workflow.jobs.prepare.steps.find(step => step.uses === 'changesets/action@v1')
+  const prepareSteps = workflow.jobs.prepare.steps
+  const gateIndex = prepareSteps.findIndex(step => step.id === 'fresh')
+  const actionIndex = prepareSteps.findIndex(step => step.id === 'changesets')
+  assert.ok(gateIndex >= 0 && actionIndex > gateIndex, 'Changesets must run after the freshness check')
+  const action = prepareSteps[actionIndex]
+  assert.equal(action.if, "steps.fresh.outputs.current == 'true'")
   assert.equal(action.with.version, 'pnpm version-packages')
   assert.equal(action.with.publish, undefined)
   assert.equal(workflow.jobs.prepare.permissions.actions, 'write')
-  const dispatch = workflow.jobs.prepare.steps.find(step => step.name === 'Explicitly validate the Release PR branch')
+  const dispatch = prepareSteps.find(step => step.name === 'Explicitly validate the Release PR branch')
   assert.equal(dispatch.env.PR_NUMBER, '${{ steps.changesets.outputs.pullRequestNumber }}')
   assert.equal(workflow.jobs.market.uses, './.github/workflows/ci.yml')
   assert.equal(workflow.jobs.market.with['release-ref'], '${{ needs.publish.outputs.release-ref }}')

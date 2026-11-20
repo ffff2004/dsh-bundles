@@ -4,6 +4,10 @@
 
 ![模型选择器里的 OpenAI Codex (live) 分组](docs/model-picker.png)
 
+## 兼容性
+
+实现和单元测试面向 `0.2.1-rc.3`，已在 `0.2.1-rc.2` , `0.2.1-rc.3`, `0.2.2-rc.3` 上实测可用。
+
 ## 行为
 
 - 挂载时读一次缓存并注册 route；`llm/adapters-updated` 会让已打开的模型选择器刷新，无需重启。

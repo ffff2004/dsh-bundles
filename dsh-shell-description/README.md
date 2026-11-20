@@ -1,6 +1,6 @@
 # 隐藏 Shell 描述参数
 
-Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 与 rc.3 的一次性 `bash` / `pwsh`。
+Host 挂载的 Cordis bundle，适配 DSH 的一次性 `bash` / `pwsh`。
 
 ## 动机
 
@@ -11,6 +11,10 @@ Host 挂载的 Cordis bundle，适配 DSH 0.2.1-rc.2 与 rc.3 的一次性 `bash
 - 从各 agent 可见工具 schema 的 `properties`、`required` 中隐藏 `description`。
 - 删除工具说明中的 `Provide description before command` 指令
 - 无 `command: string` 参数的 persistent shell，以及本身不声明 description 且无残留说明的工具不受影响。
+
+## 兼容性
+
+实现和单元测试面向 `0.2.1-rc.3`，已在 `0.2.1-rc.2` , `0.2.1-rc.3`, `0.2.2-rc.3` 上实测可用。
 
 ## 限制
 

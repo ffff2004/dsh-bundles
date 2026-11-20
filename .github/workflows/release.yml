@@ -101,7 +101,7 @@ jobs:
       - name: Prepare independent private bundle versions (no npm publishing)
         id: changesets
         if: steps.fresh.outputs.current == 'true'
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: pnpm version-packages
           title: 'chore: release bundles'

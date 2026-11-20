@@ -1,0 +1,30 @@
+{
+  "name": "@ffff2004-dsh-packages/github-link",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "homepage": "https://github.com/ffff2004/dsh-bundles/tree/main/github-link",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffff2004/dsh-bundles.git",
+    "directory": "github-link"
+  },
+  "description": "Open the active workspace's GitHub repositories from the DSH Web conversation header.",
+  "engines": { "dsh": ">=0.2.2-rc.3 <0.3.0-0" },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "remotes.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md", "THIRD-PARTY-NOTICES.md"],
+  "scripts": { "test": "node --test" },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web" }
+  },
+  "devDependencies": {
+    "react": "18.3.1",
+    "react-test-renderer": "18.3.1"
+  }
+}

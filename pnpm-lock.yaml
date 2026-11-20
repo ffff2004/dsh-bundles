@@ -88,6 +88,15 @@ importers:
         specifier: 0.2.1-rc.3
         version: 0.2.1-rc.3(1f5d0a9b849aaa1244bc4f2e453f609a)
 
+  github-link:
+    devDependencies:
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-test-renderer:
+        specifier: 18.3.1
+        version: 18.3.1(react@18.3.1)
+
   lean-preset:
     devDependencies:
       '@deepseek-ai/dsh-agent-instructions':

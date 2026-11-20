@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "GitHub 仓库链接",
+    "description": "从会话右上角打开当前 workspace 的 GitHub 仓库。有多个仓库时，从下拉菜单选择。"
+  }
+}

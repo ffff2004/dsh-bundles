@@ -9,6 +9,7 @@
 | [background-wait-guidance](<background-wait-guidance/README.md>) | 同一 bundle 内提供可独立启停的 jobs 与子代理等待指引，通过 system prompt 引导模型告知等待对象后让出 turn，等待后台完成通知。 |
 | [codex-live](<codex-live/README.md>) | 注册跟随本机 Codex CLI 模型缓存的 LLM route，使用其认证信息并补充能力模板；另带一个「设置 → Codex 额度」页，展示同一账号的窗口与重置券。 |
 | [shell-description](<dsh-shell-description/README.md>) | 从 agent 可见的 `bash` / `pwsh` 工具定义中隐藏 `description` 参数。 |
+| [github-link](<github-link/README.md>) | 在 Web 会话右上角打开当前 workspace 的 GitHub 仓库；多个仓库可从下拉菜单选择。 |
 | [lean-preset](<lean-preset/README.md>) | 提供“轻量模式”“轻量创造模式”和“轻量 PTC 模式”，减少提供的工具，节省 token。 |
 | [preview-download](<preview-download/README.md>) | 在 Web UI 文档预览工具栏添加下载按钮，通过浏览器下载当前预览文件。 |
 | [preview-path](<preview-path/README.md>) | 把文档预览和文件树的路径行变成可编辑输入框，新增可多开的目录页。 |
@@ -18,7 +19,7 @@
 
 ## 使用
 
-全部 9 个 bundle 将以 `@ffff2004-dsh-packages/` scope随首个 Release PR 发布。新旧包视为独立身份，不提供兼容入口；已有安装请先通过 Plugin Manager 移除旧 bundle，再安装新包，避免重复加载。仓库子目录保持不变。
+bundle 以 `@ffff2004-dsh-packages/` scope 发布。若已安装旧 scope 的同名 bundle，请先通过 Plugin Manager 移除旧包，再安装新包，避免重复加载。
 
 DSH Agent 可通过 Plugin Manager 工具将对应子目录安装为 bundle，人工安装方法如下：
 

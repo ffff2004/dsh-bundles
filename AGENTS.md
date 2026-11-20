@@ -26,6 +26,8 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 
 当文档（包括 `AGENTS.md` 、根/子 `README.md` 等）过时时，及时更新。
 
+在新增 bundle README 时包括“兼容性”小节，说明：实现和单元测试面向的 DSH 版本，以及在哪些版本上实测可用。
+
 修改 bundle 用户可见行为或编写 changeset/changelog 时，先读[Changesets 约定](<.changeset/README.md>)。
 
 维护版本发布、CI/Pages 或本地生成市场索引时，先读[发布说明](<plugin-market-publishing.md>)。

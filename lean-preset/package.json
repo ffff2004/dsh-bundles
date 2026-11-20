@@ -9,28 +9,24 @@
     "url": "git+https://github.com/ffff2004/dsh-bundles.git",
     "directory": "lean-preset"
   },
-  "engines": { "dsh": ">=0.2.1-rc.2 <0.3.0-0" },
+  "engines": { "dsh": ">=0.2.2-rc.1 <0.3.0-0" },
   "meta": {
     "title": "Lean agent presets",
     "description": "Declares lean, lean-cordis, and lean-ptc presets: lightweight tools with optional Cordis development or programmatic tool calling."
   },
   "exports": {
-    "./tool-order": "./tool-order.js",
     "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg",
-    "./tool-order/locale/*.json": "./tool-order-locale/*.json",
-    "./tool-order/icon": "./icon.svg"
+    "./icon": "./icon.svg"
   },
-  "files": ["cordis.patch.yml", "tool-order.js", "locale/*.json", "tool-order-locale/*.json", "icon.svg", "README.md"],
+  "files": ["cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
   "scripts": { "test": "node --test" },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent-instructions": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-agent-tool-presentation": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-compaction-tool-result-pruner": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-persona": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-skill-filesystem": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-tool-subagent": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-tool-web": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-agent-instructions": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-compaction-tool-result-pruner": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-persona": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-skill-filesystem": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-tool-subagent": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-tool-web": "0.2.2-rc.3",
     "@deepseek-ai/schemastery": "3.18.5",
     "yaml": "^2.8.1"
   },

@@ -84,9 +84,9 @@
           # ── reminders ─────────────────────────────────────────────────────
 
           # The host `schedule` service owns persistence and delivery. This row
-          # only registers schedule_create/list/update/delete in the preset scope;
-          # it stays inert without that service. Delegated children cannot use
-          # reminders, even when their preset includes these tools.
+          # only registers the schedule tools in the preset scope; it stays inert
+          # without that service. Delegated children cannot use reminders, even
+          # when their preset includes these tools.
           - id: tool-schedule
             name: '@deepseek-ai/dsh-tool-schedule'
 
@@ -149,27 +149,25 @@
           # themselves, so they need no realm.
           #
           # `subagent` is the spawn provider's delegation tool, mounted once.
-          # Each delegation starts a managed activation and returns the child id;
-          # the subagent runtime owns result delivery and resource cleanup.
+          # Each delegation starts a managed activation and returns the child's
+          # identity; the subagent runtime owns result delivery and cleanup.
           # `send_message` can continue a settled child; `interrupt_agent` requests
           # that a running child stop. Neither depends on a background-mode switch.
           #
-          # `modelSelectionSettings` reads the host's `subagentModelSelection`
-          # service and registers `list_subagent_models` for an agent whose
-          # session carries a model-selection policy; the host row that publishes
-          # that service belongs to the deployment, not here.
+          # `modelSelection` lets the model choose the child's provider, model,
+          # and reasoning effort; `modelDiscovery` registers
+          # `list_subagent_models` for that choice. The host row that publishes
+          # `subagentModelSelection` belongs to the deployment, not here.
           - id: tool-subagent-control
             name: '@deepseek-ai/dsh-tool-subagent-control'
-
-          - id: tool-subagent-list-agents
-            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
           - id: tool-subagent
             name: '@deepseek-ai/dsh-tool-subagent'
             config:
               provider: spawn
               toolName: subagent
-              modelSelectionSettings: true
+              modelSelection: true
+              modelDiscovery: true
 
           # ── presentation ──────────────────────────────────────────────────
 
@@ -247,20 +245,15 @@
               searchTimeoutMs: 60000
           - id: tool-subagent-control
             name: '@deepseek-ai/dsh-tool-subagent-control'
-          - id: tool-subagent-list-agents
-            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
           - id: tool-subagent
             name: '@deepseek-ai/dsh-tool-subagent'
             config:
               provider: spawn
               toolName: subagent
-              modelSelectionSettings: true
+              modelSelection: true
+              modelDiscovery: true
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
-          # Scope-filtered assembly policy: keep the shared lean tools first.
-          # Consumes the Host systemPrompt service; publishes no service.
-          - id: tool-order
-            name: '@ffff2004-dsh-packages/lean-preset/tool-order'
           - id: tool-cordis
             name: '@deepseek-ai/dsh-tool-cordis'
           # Management tools require a profile and retain normal approval rules.
@@ -271,8 +264,8 @@
             name: '@deepseek-ai/dsh-plugin-market/tools'
             disabled: !!js "!ctx.get('profileContext')"
 
-    # Independent declaration: identical to lean except for PTC presentation.
-    # tools and ptcRuntime remain Host-owned; this row selects presentation only.
+    # Independent declaration: identical to lean except for the PTC executor.
+    # tools and ptcRuntime remain Host-owned; this row selects the executor only.
     - id: preset-lean-ptc
       name: '@deepseek-ai/dsh-agent-preset'
       config:
@@ -329,19 +322,16 @@
               searchTimeoutMs: 60000
           - id: tool-subagent-control
             name: '@deepseek-ai/dsh-tool-subagent-control'
-          - id: tool-subagent-list-agents
-            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
           - id: tool-subagent
             name: '@deepseek-ai/dsh-tool-subagent'
             config:
               provider: spawn
               toolName: subagent
-              modelSelectionSettings: true
+              modelSelection: true
+              modelDiscovery: true
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
           # Keep the official PTC-only guidance and generated SDK intact.
           # Requires the Host's ptcRuntime; do not isolate or provide it here.
-          - id: tool-presentation
-            name: '@deepseek-ai/dsh-agent-tool-presentation'
-            config:
-              mode: ptc
+          - id: tool-executor-ptc
+            name: '@deepseek-ai/dsh-tool-executor-ptc'

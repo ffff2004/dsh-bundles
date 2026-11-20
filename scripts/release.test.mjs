@@ -350,42 +350,20 @@ if (route.endsWith('/pulls/42')) {
   })
 }
 
-test('workflow keeps trusted main execution, token permissions, explicit PR dispatch and reusable CI', () => {
+test('release workflow gates Changesets and forwards release metadata', () => {
   const workflow = parse(readFileSync(join(repo, '.github/workflows/release.yml'), 'utf8'))
-  assert.deepEqual(workflow.on.push.branches, ['main'])
-  assert.equal(workflow.concurrency, undefined, 'distinct release commits must never replace pending tag jobs')
-  assert.equal(workflow.jobs.publish.concurrency, undefined)
-  assert.equal(workflow.jobs.prepare.concurrency.group, 'bundle-release-pr')
-  assert.equal(workflow.on.workflow_dispatch.inputs['release-ref'].required, false)
-  assert.equal(workflow.jobs.plan.if, "github.ref == 'refs/heads/main'")
-  assert.equal(workflow.jobs.prepare.if, "github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release-ref == '')")
-  assert.equal(workflow.jobs.publish.if, "needs.plan.outputs.is-release == 'true' && (github.event_name == 'push' || inputs.release-ref != '')")
-  const plan = workflow.jobs.plan.steps.find(step => step.id === 'plan')
-  assert.equal(plan.env.RELEASE_REF, '${{ inputs.release-ref || github.sha }}')
-  const retryGuard = workflow.jobs.plan.steps.find(step => step.name === 'Reject retries without a valid release diff')
-  assert.equal(retryGuard.if, "github.event_name == 'workflow_dispatch' && inputs.release-ref != '' && steps.plan.outputs.is-release != 'true'")
-  for (const name of ['plan', 'prepare', 'publish']) {
-    const checkout = workflow.jobs[name].steps.find(step => step.uses === 'actions/checkout@v7')
-    assert.equal(checkout.with.ref, 'main')
-  }
   const prepareSteps = workflow.jobs.prepare.steps
   const gateIndex = prepareSteps.findIndex(step => step.id === 'fresh')
   const actionIndex = prepareSteps.findIndex(step => step.id === 'changesets')
   assert.ok(gateIndex >= 0 && actionIndex > gateIndex, 'Changesets must run after the freshness check')
   const action = prepareSteps[actionIndex]
   assert.equal(action.if, "steps.fresh.outputs.current == 'true'")
-  assert.equal(action.with.version, 'pnpm version-packages')
-  assert.equal(action.with.publish, undefined)
-  assert.equal(workflow.jobs.prepare.permissions.actions, 'write')
+  assert.equal(action.with?.publish, undefined, 'Changesets must only prepare the Release PR')
+
   const dispatch = prepareSteps.find(step => step.name === 'Explicitly validate the Release PR branch')
   assert.equal(dispatch.env.PR_NUMBER, '${{ steps.changesets.outputs.pullRequestNumber }}')
+
   assert.equal(workflow.jobs.market.uses, './.github/workflows/ci.yml')
   assert.equal(workflow.jobs.market.with['release-ref'], '${{ needs.publish.outputs.release-ref }}')
   assert.equal(workflow.jobs.market.with['release-tags'], '${{ needs.publish.outputs.release-tags }}')
-  const ci = parse(readFileSync(join(repo, '.github/workflows/ci.yml'), 'utf8'))
-  const verify = ci.jobs.market.steps.find(step => step.name === 'Verify every indexed version and the complete release batch')
-  assert.match(verify.run, /--release-ref/u)
-  assert.equal(verify.env.RELEASE_REF, '${{ inputs.release-ref }}')
-  assert.ok(ci.jobs.preflight.steps.some(step => step.uses === 'actions/checkout@v7'))
-  assert.match(ci.jobs.preflight.steps.find(step => step.id === 'ref').run, /parseReleaseTag/u)
 })

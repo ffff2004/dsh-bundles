@@ -22,6 +22,8 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 
 所有 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @ffff2004-dsh-packages/shell-description test`。
 
+修改现有 bundle 时，在新 git worktree 中进行，以免破坏正在运行的实例。
+
 ## 文档
 
 当文档（包括 `AGENTS.md` 、根/子 `README.md` 等）过时时，及时更新。

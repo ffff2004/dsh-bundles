@@ -53,14 +53,15 @@ function decode(value) {
   }
 }
 
+function parseFile(file) {
+  const tree = parser.parse(readFileSync(file, 'utf8'))
+  return { tree, anchors: anchorsIn(tree) }
+}
+
 export function checkMarkdownFiles(files) {
   const parsed = new Map()
   const errors = []
-  for (const file of files) {
-    const source = readFileSync(file, 'utf8')
-    const tree = parser.parse(source)
-    parsed.set(file, { tree, anchors: anchorsIn(tree) })
-  }
+  for (const file of files) parsed.set(file, parseFile(file))
   for (const file of files) {
     const entry = parsed.get(file)
     function visit(node) {
@@ -85,12 +86,7 @@ export function checkMarkdownFiles(files) {
       if (!fragment) return
       if (path && extname(target).toLowerCase() !== '.md') return
       const targetEntry = parsed.get(target)
-      if (!targetEntry) {
-        if (!existsSync(target)) return
-        const source = readFileSync(target, 'utf8')
-        const tree = parser.parse(source)
-        parsed.set(target, { tree, anchors: anchorsIn(tree) })
-      }
+      if (!targetEntry) parsed.set(target, parseFile(target))
       if (!parsed.get(target).anchors.has(fragment)) {
         errors.push(`${sourceLocation(node, file)}: local anchor does not exist: ${destination}`)
       }

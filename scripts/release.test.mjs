@@ -359,9 +359,15 @@ test('release workflow gates Changesets and forwards release metadata', () => {
   const action = prepareSteps[actionIndex]
   assert.equal(action.if, "steps.fresh.outputs.current == 'true'")
   assert.equal(action.with?.publish, undefined, 'Changesets must only prepare the Release PR')
+  assert.equal(action.with?.['version-script'], 'pnpm version-packages')
+  assert.equal(action.with?.['pr-title'], 'chore: release bundles')
+  assert.equal(action.with?.['commit-message'], 'chore: release bundles')
+  assert.equal(action.with?.version, undefined)
+  assert.equal(action.with?.title, undefined)
+  assert.equal(action.with?.commit, undefined)
 
   const dispatch = prepareSteps.find(step => step.name === 'Explicitly validate the Release PR branch')
-  assert.equal(dispatch.env.PR_NUMBER, '${{ steps.changesets.outputs.pullRequestNumber }}')
+  assert.equal(dispatch.env.PR_NUMBER, '${{ steps.changesets.outputs.pr-number }}')
 
   assert.equal(workflow.jobs.market.uses, './.github/workflows/ci.yml')
   assert.equal(workflow.jobs.market.with['release-ref'], '${{ needs.publish.outputs.release-ref }}')

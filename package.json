@@ -4,8 +4,9 @@
   "type": "module",
   "packageManager": "pnpm@11.25.0",
   "scripts": {
-    "lint": "syncpack lint && eslint . && node scripts/check-market-scope.mjs && node scripts/check-dependencies.mjs",
-    "test:lint": "node --test scripts/dependencies.test.mjs scripts/bundle-scope.test.mjs",
+    "lint": "syncpack lint && eslint . && node scripts/check-markdown-links.mjs && node scripts/check-market-scope.mjs && node scripts/check-dependencies.mjs",
+    "lint:links": "node scripts/check-markdown-links.mjs",
+    "test:lint": "node --test scripts/dependencies.test.mjs scripts/bundle-scope.test.mjs scripts/check-markdown-links.test.mjs",
     "test:release": "node --test scripts/release*.test.mjs scripts/market*.test.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only"
@@ -15,8 +16,11 @@
     "eslint": "10.13.0",
     "eslint-import-resolver-node": "0.4.0",
     "eslint-plugin-import-x": "4.17.1",
+    "github-slugger": "2.0.0",
+    "remark-parse": "11.0.0",
     "semver": "7.8.5",
     "syncpack": "15.3.3",
+    "unified": "11.0.5",
     "yaml": "2.9.1"
   }
 }

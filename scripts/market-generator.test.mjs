@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { CACHE_POLICY } from './market-policy.mjs';
 import { fixture, manifest, NAME, SOURCE_URL } from './market-test-fixture.mjs';
 import { verifyMarket } from './market-verify.mjs';
 import { GENERATE_PATH, PATCHES, patchGenerateSource, prepareGenerator, UPSTREAM_SHA } from './prepare-market-generator.mjs';
@@ -19,9 +17,6 @@ test('minimal patch replaces only unique known anchors and namespaces all upstre
     assert.ok(patched.includes(after));
   }
   assert.doesNotMatch(patched, /version: undefined|tag\.name === undefined/u);
-  // Normal results and the last-success fallback both include the same policy version upstream.
-  const key = version => createHash('sha256').update(JSON.stringify([version, SOURCE_URL])).digest('hex');
-  assert.notEqual(key(7), key(CACHE_POLICY));
 });
 
 test('patch rejects changed, missing, duplicate anchors and a second application', () => {

@@ -41,7 +41,7 @@ From the repository root, run `pnpm --filter @ffff2004-dsh-packages/preview-down
 The bundle uses `node --test`, like every other bundle. The route tests preserve
 all 17 original check labels across four explicit scenario groups, using a real
 temporary file and cleaning it in `finally`; they do not send live requests.
-Test locations and dependency checks follow the [repository policy](<../dependency-policy.md>).
+Test locations and dependency checks follow the [repository policy](<../docs/dependency-policy.md>).
 
 ## Install and remove
 

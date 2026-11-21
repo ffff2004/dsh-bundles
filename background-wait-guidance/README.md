@@ -1,6 +1,6 @@
 # 后台等待指引
 
-> **已弃用**：自本版本起停止维护，最后验证 DSH `0.2.1-rc.3`。无替代 bundle；现有安装可继续使用，但不再保证后续 DSH 版本的兼容性。历史版本与 tags 保留。详见[弃用说明](<../deprecated-bundles.md>)。
+> **已弃用**：自本版本起停止维护，最后验证 DSH `0.2.1-rc.3`。无替代 bundle；现有安装可继续使用，但不再保证后续 DSH 版本的兼容性。历史版本与 tags 保留。详见[弃用说明](<../docs/deprecated-bundles.md>)。
 
 当没有其他独立工作时，引导模型先告知用户等待对象，再让出当前 turn 等待后台完成通知，避免通过工具反复查询进度。一个 bundle 内包含两个独立 plugin，不修改 DSH 内置代码。
 
@@ -36,7 +36,7 @@
 
 ## 安装
 
-通过 Plugin Manager 安装本目录。安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准；替换已安装包可能需要重启 DSH。加载范围以 [manifest](<package.json>) 的 `engines.dsh` 为准，保留 `0.2.1-rc.2` 下界并允许后续 0.2 版本；这不是全部 0.2.x 的逐版兼容保证，验证基线与边界见[依赖策略](<../dependency-policy.md>)。
+通过 Plugin Manager 安装本目录。安装会影响当前 profile 中的所有 session。是否实时生效以安装结果的 `application` 字段为准；替换已安装包可能需要重启 DSH。加载范围以 [manifest](<package.json>) 的 `engines.dsh` 为准，保留 `0.2.1-rc.2` 下界并允许后续 0.2 版本；这不是全部 0.2.x 的逐版兼容保证，验证基线与边界见[依赖策略](<../docs/dependency-policy.md>)。
 
 ## 验证
 

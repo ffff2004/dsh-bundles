@@ -1,6 +1,5 @@
-# Every top-level directory is an independently installable bundle.
-# Keep this glob covering all of them: the plugin-market generator reads it
-# instead of falling back to its own directory scan.
+# Keep this glob covering every bundle directory: the plugin-market generator
+# uses it first to find packages whose package.json declares dsh.bundle.
 packages:
   - "*"
 

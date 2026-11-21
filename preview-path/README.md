@@ -87,7 +87,7 @@ files with default per-file isolation. The contract tests preserve all 62
 original check labels across 11 explicit scenario groups and restore their
 `window` mock after the test. The existing React navigation tests remain
 unchanged. These tests do not verify browser layout or the live Host tab planner.
-Test locations and dependency checks follow the [repository policy](<../dependency-policy.md>).
+Test locations and dependency checks follow the [repository policy](<../docs/dependency-policy.md>).
 
 ## Install and remove
 

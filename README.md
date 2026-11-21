@@ -14,7 +14,7 @@
 | [preview-path](<preview-path/README.md>) | 把文档预览和文件树的路径行变成可编辑输入框，新增可多开的目录页。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
 
-[已弃用的 Bundle](<deprecated-bundles.md>)
+[已弃用的 Bundle](<docs/deprecated-bundles.md>)
 
 ## 使用
 
@@ -61,4 +61,4 @@ dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HE
 
 ## 发布维护
 
-首次配置、版本发布及本地生成步骤见 [插件市场发布说明](<plugin-market-publishing.md>)。
+一次性配置、版本发布及本地生成步骤见 [插件市场发布说明](<docs/plugin-market-publishing.md>)。

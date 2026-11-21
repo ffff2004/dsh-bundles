@@ -4,4 +4,4 @@
 
 包独立使用 SemVer。提示词、默认行为、权限和宿主兼容要求也属于用户契约；破坏性变化使用 major 并写迁移方式。不要从 Conventional Commits 自动推断版本。
 
-版本、changelog 与发布由 Release PR 驱动，流程及失败重试见[发布说明](<../plugin-market-publishing.md>)。
+版本、changelog 与发布由 Release PR 驱动，流程及失败重试见[发布说明](<../docs/plugin-market-publishing.md>)。

@@ -1,6 +1,6 @@
-# Every top-level directory is an independently installable bundle.
+# Each top-level package directory is an independently installable bundle.
 # Keep this glob covering all of them: the plugin-market generator reads it
-# instead of falling back to its own directory scan.
+# instead of falling back to its own directory scan. `docs/` has no package.json.
 packages:
   - "*"
 

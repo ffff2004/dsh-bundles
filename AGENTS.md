@@ -28,14 +28,16 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 
 当文档（包括 `AGENTS.md` 、根/子 `README.md` 等）过时时，及时更新。
 
+维护者参考文档放在 `docs/`；根目录保留 `README.md` 和本文件作为入口。
+
 在新增 bundle README 时包括“兼容性”小节，说明：实现和单元测试面向的 DSH 版本，以及在哪些版本上实测可用。
 
 修改 bundle 用户可见行为或编写 changeset/changelog 时，先读[Changesets 约定](<.changeset/README.md>)。
 
-维护版本发布、CI/Pages 或本地生成市场索引时，先读[发布说明](<plugin-market-publishing.md>)。
+维护版本发布、CI/Pages 或本地生成市场索引时，先读[发布说明](<docs/plugin-market-publishing.md>)。
 
-新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
+新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<docs/client-bundle-constraints.md>)。
 
-新增 bundle 及测试，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<dependency-policy.md>)。
+新增 bundle 及测试，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<docs/dependency-policy.md>)。
 
-弃用或恢复维护 bundle 时，先读[已弃用的 Bundle](<deprecated-bundles.md>)。不要参考已弃用 bundle 的源码，其实现可能过时。
+弃用或恢复维护 bundle 时，先读[已弃用的 Bundle](<docs/deprecated-bundles.md>)。不要参考已弃用 bundle 的源码，其实现可能过时。

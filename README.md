@@ -6,16 +6,15 @@
 
 | Bundle | 简介 |
 | --- | --- |
-| [background-wait-guidance](<background-wait-guidance/README.md>) | 同一 bundle 内提供可独立启停的 jobs 与子代理等待指引，通过 system prompt 引导模型告知等待对象后让出 turn，等待后台完成通知。 |
 | [codex-live](<codex-live/README.md>) | 注册跟随本机 Codex CLI 模型缓存的 LLM route，使用其认证信息并补充能力模板；另带一个「设置 → Codex 额度」页，展示同一账号的窗口与重置券。 |
 | [shell-description](<dsh-shell-description/README.md>) | 从 agent 可见的 `bash` / `pwsh` 工具定义中隐藏 `description` 参数。 |
 | [github-link](<github-link/README.md>) | 在 Web 会话右上角打开当前 workspace 的 GitHub 仓库；多个仓库可从下拉菜单选择。 |
 | [lean-preset](<lean-preset/README.md>) | 提供“轻量模式”“轻量创造模式”和“轻量 PTC 模式”，减少提供的工具，节省 token。 |
 | [preview-download](<preview-download/README.md>) | 在 Web UI 文档预览工具栏添加下载按钮，通过浏览器下载当前预览文件。 |
 | [preview-path](<preview-path/README.md>) | 把文档预览和文件树的路径行变成可编辑输入框，新增可多开的目录页。 |
-| [shell-timeout-guidance](<shell-timeout-guidance/README.md>) | 仅为可见且超时转后台的 `bash` / `pwsh` 添加提示，引导模型省略不必要的 `timeoutMs`。 |
 | [skill-name-mapping](<skill-name-mapping/README.md>) | 自动发现本地技能，将技能名称中的 ASCII 大写字母映射为小写；不修改源文件，并检查非法名称与命名冲突。 |
-| [zotero-select](<zotero-select/README.md>) | 提取回复中的 Zotero select Markdown 链接，在已完成回复下提供折叠文献列表，并添加引用格式指引。 |
+
+[已弃用的 Bundle](<deprecated-bundles.md>)
 
 ## 使用
 
@@ -36,12 +35,12 @@ https://ffff2004.github.io/dsh-bundles/index.json
 
 ### 从 GitHub 安装（GUI）
 
-以 [shell-timeout-guidance](<shell-timeout-guidance/README.md>) 为例，仓库发布到 GitHub 后：
+以 [lean-preset](<lean-preset/README.md>) 为例，仓库发布到 GitHub 后：
 
 1. 在 Web GUI 侧栏打开 **插件 → 添加插件**。
 2. 在“包名或地址”中输入以下 Git 地址：
    ```text
-   git+https://github.com/ffff2004/dsh-bundles.git#HEAD&path:/shell-timeout-guidance
+   git+https://github.com/ffff2004/dsh-bundles.git#HEAD&path:/lean-preset
    ```
 3. 点击 **安装**，按界面提示完成启用。
 
@@ -50,7 +49,7 @@ https://ffff2004.github.io/dsh-bundles/index.json
 在 `web` profile 中安装同一个 bundle：
 
 ```bash
-dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HEAD&path:/shell-timeout-guidance'
+dsh plugin --profile web add 'git+https://github.com/ffff2004/dsh-bundles.git#HEAD&path:/lean-preset'
 ```
 
 如使用其他 profile，将 `web` 替换为对应名称。整段地址需加引号，避免 shell 将 `&` 解释为后台运行符。

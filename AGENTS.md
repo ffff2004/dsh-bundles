@@ -37,3 +37,5 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 新增或修改 browser half（`client.js`、`dsh.client` 声明）时，先读[client bundle 约束](<client-bundle-constraints.md>)。
 
 新增 bundle 及测试，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<dependency-policy.md>)。
+
+弃用或恢复维护 bundle 时，先读[已弃用的 Bundle](<deprecated-bundles.md>)。不要参考已弃用 bundle 的源码，其实现可能过时。

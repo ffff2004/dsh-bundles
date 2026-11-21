@@ -1,5 +1,7 @@
 # Shell timeout guidance
 
+> **已弃用**：自本版本起停止维护，最后验证 DSH `0.2.1-rc.3`。无替代 bundle；现有安装可继续使用，但不再保证后续 DSH 版本的兼容性。历史版本与 tags 保留。详见[弃用说明](<../deprecated-bundles.md>)。
+
 独立的 Host 插件，引导模型省略不必要的 shell `timeoutMs` 参数。支持 `bash` 和 `pwsh`，不自动判断模型，不改变工具 schema、默认超时或调用参数。
 
 根据当前 agent scope 中可见的工具，只贡献一条简短的 system-prompt section。例如两个工具都可见时：

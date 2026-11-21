@@ -14,10 +14,10 @@ bundle 的 `package.json` `name` 使用 `@ffff2004-dsh-packages/<名称>`；源�
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm lint       # 只读：版本一致性、bundle 名 scope、源码声明与兼容策略
-pnpm test:lint  # 根检查器的真实 CLI 正反例
-pnpm test:release # 版本、tag 与市场发布边界
-pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
+pnpm lint       # 只读检查
+pnpm test:lint  # 根 linter 行为测试
+pnpm test:release # 根版本与市场发布测试
+pnpm -r test    # 全部 bundle 行为测试（不会运行根测试）
 ```
 
 所有 bundle 的测试入口统一为 `node --test`；只跑一个 bundle：`pnpm --filter @ffff2004-dsh-packages/shell-description test`。
@@ -26,9 +26,11 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 
 ## 文档
 
-当文档（包括 `AGENTS.md` 、根/子 `README.md` 等）过时时，及时更新。
+当文档（包括本文件、根/子 `README.md` 等）过时时，及时更新。
 
-维护者参考文档放在 `docs/`；根目录保留 `README.md` 和本文件作为入口。
+[README](<README.md>) 是面向用户的入口，其中包含 bundle 列表。
+
+维护者参考文档放在 `docs/`；根目录保留本文件作为入口。
 
 在新增 bundle README 时包括“兼容性”小节，说明：实现和单元测试面向的 DSH 版本，以及在哪些版本上实测可用。
 
@@ -40,4 +42,4 @@ pnpm -r test    # 全部 bundle 行为测试（不会运行根 scripts）
 
 新增 bundle 及测试，或修改依赖、兼容声明（如 `engines.dsh`）、源码加载方式时，先读[依赖检查策略与边界](<docs/dependency-policy.md>)。
 
-弃用或恢复维护 bundle 时，先读[已弃用的 Bundle](<docs/deprecated-bundles.md>)。不要参考已弃用 bundle 的源码，其实现可能过时。
+弃用或恢复维护 bundle 时，先读[已弃用的 Bundle](<docs/deprecated-bundles.md>)。新的 bundle 不要参考已弃用 bundle 的源码，因为可能过时。

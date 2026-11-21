@@ -51,3 +51,7 @@ Uncaught SyntaxError: Identifier 'NS' has already been declared
 | `require` 未命中模块表的报错 | `packages/client/modules/src/client/system.ts:334` |
 | `importError` 的记录边界 | 同文件 `:417` `recordingImportError`、`:407` `importError` |
 | 页面上那句 `import failed (see console …)` | `packages/client/web/src/boot-client.ts:73` |
+
+## 其他建议性规范
+
+- 尽可能复用 dsh 内置组件和 CSS token，以保证外观和交互的一致性

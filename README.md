@@ -24,14 +24,13 @@ DSH Agent 可通过 Plugin Manager 工具将对应子目录安装为 bundle，�
 
 ### 从插件市场安装（推荐）
 
-启用实验性插件 **Custom plugin markets**，进入 **插件 → Discover**，添加索引源：
+在 **插件** 页的 **实验性插件** 中启用 **自定义插件索引**（**Custom plugin indexes**），再进入 **发现（Discover）** 添加索引源：
 
 ```text
 https://ffff2004.github.io/dsh-bundles/index.json
 ```
 
 选择 bundle 和版本，确认来源后安装。索引中的 Git 来源固定到 commit，不会在安装时漂移到新的 `HEAD`。
-该地址需要维护者完成 [Pages 首次配置](<plugin-market-publishing.md#首次启用与失败重试>) 并成功部署后才可用。
 
 ### 从 GitHub 安装（GUI）
 

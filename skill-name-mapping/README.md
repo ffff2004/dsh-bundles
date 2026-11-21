@@ -4,6 +4,10 @@ v2 自动发现本地技能，将 YAML frontmatter `name` 中的 ASCII `A–Z` �
 
 例如 `Zotero` → `zotero`、`MY-Skill2` → `my-skill2`。只改英文字母大小写：不做 Unicode case folding、空格替换、下划线替换或连字符修复。转换后仍须匹配 `^[a-z0-9]+(?:-[a-z0-9]+)*$`，否则跳过并警告。原本合法的小写技能仍由原生 provider 提供，不重复注册。
 
+## 兼容性
+
+实现和单元测试面向 `0.2.1-rc.2`，已在 `0.2.1-rc.2` , `0.2.1-rc.3`, `0.2.2-rc.5` 上实测可用。
+
 ## 默认发现范围
 
 和原生 filesystem provider 一样浅扫描以下技能根，而非递归搜索全部磁盘：
@@ -42,7 +46,6 @@ v1 的 `mappings`、`originalName`、别名 `name` 配置已移除；升级时 b
 - `path` 和 `resourceBase` 使用解析符号链接后的真实文件及父目录；每次加载重读正文，名称变更不会把旧调用偷偷绑定到新名称。
 - 每秒通过 `watchFile` 观察根目录、候选技能文件和符号链接，支持新增、改名、删除、恢复与重定向；只在变更后使目录缓存失效，不定时全盘扫描。缺失目录和缺失 `SKILL.md` 也会被观察。深层资源正文的变化不更新目录。
 - 保留根 watcher 数量通常最多 32（大量显式 custom roots 时上限随配置增大），LRU 淘汰时清空目录缓存；卸载时清理全部 watcher 与 provider。
-- 不执行技能脚本，不访问或修改 Zotero 配置。
 
 ## 开发与安装
 
@@ -53,5 +56,3 @@ pnpm --filter @ffff2004-dsh-packages/skill-name-mapping test
 node --check index.js
 node --check discovery.js
 ```
-
-使用 Harness `plugin_manager` 安装本目录；更新已安装包时先 remove 再 install，以结果和 live Config 验证新代码已应用。加载范围以 [manifest](<package.json>) 的 `engines.dsh` 为准，保留 `0.2.1-rc.2` 下界并允许后续 0.2 版本；这不是全部 0.2.x 的逐版兼容保证，验证基线与边界见[依赖策略](<../dependency-policy.md>)。无 install/build scripts，图标为本插件原创 SVG。

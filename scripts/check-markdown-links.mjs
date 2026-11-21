@@ -1,13 +1,11 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { isAbsolute, dirname, extname, resolve, relative } from 'node:path'
+import { dirname, extname, resolve, relative } from 'node:path'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import GithubSlugger from 'github-slugger'
 
 const parser = unified().use(remarkParse)
-const localMarkdown = new Set(['.md', '.markdown', '.mdown', '.mkdn'])
-
 function textOf(node) {
   if (typeof node.value === 'string') return node.value
   return (node.children ?? []).map(textOf).join('')
@@ -85,7 +83,7 @@ export function checkMarkdownFiles(files) {
         return
       }
       if (!fragment) return
-      if (path && !localMarkdown.has(extname(target).toLowerCase())) return
+      if (path && extname(target).toLowerCase() !== '.md') return
       const targetEntry = parsed.get(target)
       if (!targetEntry) {
         if (!existsSync(target)) return

@@ -23,7 +23,7 @@
       config:
         id: lean
         name: 轻量模式
-        description: 标准拼装的系统提示与一次性 bash，外加文件读写、Skills、Web、后台任务、定时提醒与委派工具。
+        description: 标准拼装的系统提示与一次性 bash，外加文件读写、交互提问、Skills、Web、后台任务、定时提醒与委派工具。
         order: 5
         plugins:
           # ── identity and workspace instructions ───────────────────────────
@@ -178,13 +178,15 @@
           # `present` resolves the host `fs` and `sessionProjections`; it only
           # registers into the host `tools` registry and provides nothing, so it
           # sits loose — no realm.
-          #
-          # `ask_user_question` (`@deepseek-ai/dsh-tool-ask-user`) is deliberately
-          # NOT mounted: there is no structured mid-turn question tool, but the
-          # agent can still ask questions in ordinary replies. Host approvals use
-          # `userQuestions` independently; this preset does not mount plan mode.
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
+
+          # `ask_user_question` consumes the host `userQuestions` service and
+          # needs a UI answerer to settle; without one it fails immediately
+          # instead of hanging. This preset mounts no plan mode, and host
+          # approvals reach `userQuestions` independently of this row.
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
 
     # Independent declaration: keep its base rows aligned with `lean` above.
     # Only Cordis inspection, official development skills, and plugin management
@@ -260,6 +262,8 @@
               modelDiscovery: true
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
           - id: tool-cordis
             name: '@deepseek-ai/dsh-tool-cordis'
           # Management tools require a profile and retain normal approval rules.
@@ -339,6 +343,8 @@
               modelDiscovery: true
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
           # Keep the official PTC-only guidance and generated SDK intact.
           # Requires the Host's ptcRuntime; do not isolate or provide it here.
           - id: tool-executor-ptc

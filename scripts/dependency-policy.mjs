@@ -9,7 +9,7 @@ export const sharedPackages = new Set([
   ...[
     'agent', 'agent-instructions', 'agent-tool-presentation',
     'compaction-tool-result-pruner', 'launch-environment', 'llm', 'llm-pi-ai',
-    'persona', 'scope', 'skill-filesystem', 'system-prompt', 'tool-bash',
+    'persona', 'scope', 'skill-filesystem', 'system-prompt', 'tool-bash', 'tool-fs',
     'tool-subagent', 'tool-web', 'tools',
   ].map(name => `@deepseek-ai/dsh-${name}`),
 ])

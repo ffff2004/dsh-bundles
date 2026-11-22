@@ -6,6 +6,7 @@ import { Config as agentInstructionsConfig } from '@deepseek-ai/dsh-agent-instru
 import { resolveConfig as resolvePrunerConfig } from '@deepseek-ai/dsh-compaction-tool-result-pruner'
 import { Config as personaConfig } from '@deepseek-ai/dsh-persona'
 import { Config as skillFilesystemConfig } from '@deepseek-ai/dsh-skill-filesystem'
+import { Config as toolFsConfig } from '@deepseek-ai/dsh-tool-fs'
 import { Config as toolSubagentConfig } from '@deepseek-ai/dsh-tool-subagent'
 import { Config as toolWebConfig } from '@deepseek-ai/dsh-tool-web'
 import Schema from '@deepseek-ai/schemastery'
@@ -89,6 +90,7 @@ const configSchemas = new Map([
   ['@deepseek-ai/dsh-agent-instructions', agentInstructionsConfig],
   ['@deepseek-ai/dsh-persona', personaConfig],
   ['@deepseek-ai/dsh-skill-filesystem', skillFilesystemConfig],
+  ['@deepseek-ai/dsh-tool-fs', toolFsConfig],
   ['@deepseek-ai/dsh-tool-subagent', toolSubagentConfig],
   ['@deepseek-ai/dsh-tool-web', toolWebConfig],
 ])

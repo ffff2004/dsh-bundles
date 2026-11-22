@@ -103,18 +103,18 @@ jobs:
         if: steps.fresh.outputs.current == 'true'
         uses: changesets/action@v2
         with:
-          version: pnpm version-packages
-          title: 'chore: release bundles'
-          commit: 'chore: release bundles'
+          version-script: pnpm version-packages
+          pr-title: 'chore: release bundles'
+          commit-message: 'chore: release bundles'
         env:
           GITHUB_TOKEN: ${{ github.token }}
       # GITHUB_TOKEN-created PRs do not emit pull_request CI runs. Dispatch a
       # read-only branch run explicitly; CI checks validation-sha and cannot deploy.
       - name: Explicitly validate the Release PR branch
-        if: steps.changesets.outputs.pullRequestNumber != ''
+        if: steps.changesets.outputs.pr-number != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
+          PR_NUMBER: ${{ steps.changesets.outputs.pr-number }}
         run: |
           set -euo pipefail
           pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"

@@ -1,5 +1,13 @@
 # @ffff2004-dsh-packages/lean-preset
 
+## 2.1.0
+
+### Minor Changes
+
+- b723fff: 三个 preset 的 `tool-fs` 默认启用 `apply_patch`：可在一次调用中创建、更新、删除或移动多个文件，适合跨文件或分散区域的改动；它与其他写入工具共用宿主沙箱和审批流程，`edit` 仍然保留。
+- fb9b209: 三个 preset 挂载 `@deepseek-ai/dsh-tool-ask-user`，提供 `ask_user_question`：在需要确认、选择或补充信息时向用户发起结构化提问，答案作为普通工具结果返回。它使用宿主的 `userQuestions` 服务，需要可交互的 UI 回答者；此前本 bundle 明确不挂载该工具，需要提问只能写在普通回复里。
+- 86acd28: 三个 preset 的系统提示开场白改为 `You are a helpful assistant powered by the {{model}} model.`：`{{model}}` 由宿主的系统提示模板解析为当前会话选择的模型 ID，模型能在提示中看到自己正在使用的模型。占位符语法要求 DSH 提供 `model` 模板变量，`0.2.2-rc.1` 起已提供，与 `engines.dsh` 一致。
+
 ## 2.0.0
 
 ### Major Changes

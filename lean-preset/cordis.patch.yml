@@ -68,9 +68,13 @@
           # `fs`, its policy, and `attachments` stay in the host composition.
           # This row only registers into the host `tools` registry and provides
           # nothing, so it needs no realm. `read_image` registers while that
-          # `attachments` service is present.
+          # `attachments` service is present. `apply_patch` is opt-in upstream
+          # (defaults to false) and registers beside `edit`; it reuses the same
+          # sandbox and approval stack as the other mutating tools.
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: true
 
           # ── background jobs ───────────────────────────────────────────────
 
@@ -209,6 +213,8 @@
             disabled: !!js process.platform !== 'win32'
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: true
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
           - id: tool-schedule
@@ -290,6 +296,8 @@
             disabled: !!js process.platform !== 'win32'
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: true
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
           - id: tool-schedule

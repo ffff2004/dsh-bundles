@@ -10,7 +10,7 @@
 
 ## 共同能力
 
-- 提供一次性 Shell、文件读写、Skills、Web、后台任务、定时任务与 subagent 工具。
+- 提供一次性 Shell、文件读写（含多文件 `apply_patch`）、Skills、Web、后台任务、定时任务与 subagent 工具。
 - 加载用户全局及项目目录链中的 `AGENTS.md` 指令。
 
 ## 轻量创造模式的增量

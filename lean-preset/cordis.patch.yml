@@ -31,7 +31,7 @@
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
-              prefix: You are a helpful assistant.
+              prefix: You are a helpful assistant powered by the {{model}} model.
 
           # Workspace instructions: the user-global `$DSH_HOME/AGENTS.md` followed
           # by the project chain down to the session working directory. The
@@ -202,7 +202,7 @@
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
-              prefix: You are a helpful assistant.
+              prefix: You are a helpful assistant powered by the {{model}} model.
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
@@ -287,7 +287,7 @@
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
-              prefix: You are a helpful assistant.
+              prefix: You are a helpful assistant powered by the {{model}} model.
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
